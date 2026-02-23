@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PropAI – Full App Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Lora:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#1e7a52;--green-l:#e8f5ee;--green-d:#155c3d;
+  --bg:#f2f1ec;--dark:#111;--card:#fff;--gray:#8e8e93;
+  --border:rgba(0,0,0,0.07);--red:#dc2626;--amber:#d97706;--blue:#2563eb;
+}
+html,body{width:100%;height:100%;}
+body{background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:'DM Sans',sans-serif;overflow:hidden;user-select:none;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 600px 400px at 15% 60%,#0d2018 0%,transparent 100%),radial-gradient(ellipse 500px 500px at 85% 20%,#0a1a14 0%,transparent 100%);z-index:0;}
+
+.top-label{display:none;}
+.top-label span{font-size:11px;font-weight:600;color:rgba(255,255,255,0.2);letter-spacing:2px;text-transform:uppercase;}
+.blink{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+
+/* iPhone shell — scales to fit viewport height */
+.iphone-wrap{position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;}
+.iphone{
+  position:relative;
+  width:393px;height:852px;
+  background:#1a1a1a;border-radius:56px;
+  box-shadow:0 0 0 1px #2a2a2a,0 0 0 2px #111,0 0 0 3.5px #3a3a3a,0 0 0 4.5px #111,0 40px 100px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.06);
+  overflow:hidden;
+  transform-origin:top center;
+}
+.iphone::before{content:'';position:absolute;left:-3px;top:140px;width:3px;height:36px;background:#2a2a2a;border-radius:2px 0 0 2px;box-shadow:0 50px 0 #2a2a2a,0 100px 0 #2a2a2a;}
+.iphone::after{content:'';position:absolute;right:-3px;top:175px;width:3px;height:70px;background:#2a2a2a;border-radius:0 2px 2px 0;}
+.di{position:absolute;top:13px;left:50%;transform:translateX(-50%);width:126px;height:37px;background:#000;border-radius:20px;z-index:200;}
+
+.screen{position:absolute;inset:0;background:var(--bg);border-radius:56px;overflow:hidden;display:flex;flex-direction:column;}
+
+/* Status bar */
+.sb{height:58px;padding:18px 26px 0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;z-index:100;background:var(--bg);}
+.sb-time{font-size:16px;font-weight:700;color:var(--dark);letter-spacing:-.4px;}
+.sb-r{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--dark);}
+
+/* Pages */
+.page{display:none;flex-direction:column;flex:1;overflow:hidden;animation:fadeUp .25s ease;}
+.page.active{display:flex;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;}
+.scroll::-webkit-scrollbar{display:none;}
+
+/* Headers */
+.ph{padding:4px 22px 12px;flex-shrink:0;}
+.ph-greet{font-size:11px;font-weight:600;color:var(--gray);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:2px;}
+.ph-title{font-family:'Lora',serif;font-size:26px;font-weight:700;color:var(--dark);line-height:1.1;}
+.ph-title em{font-style:italic;color:var(--green);}
+.ph-sub{font-size:12.5px;color:var(--gray);margin-top:3px;}
+
+/* Cards */
+.card{background:var(--card);border-radius:18px;border:1px solid var(--border);box-shadow:0 2px 10px rgba(0,0,0,.04);}
+.card-press{transition:transform .15s;cursor:pointer;}
+.card-press:active{transform:scale(.98);}
+.card-press:hover{box-shadow:0 6px 22px rgba(0,0,0,.08);}
+
+/* Sections */
+.sec-label{font-size:10.5px;letter-spacing:1.1px;text-transform:uppercase;color:#b0b0b5;font-weight:700;margin:0 22px 9px;flex-shrink:0;}
+
+/* ===== DASHBOARD ===== */
+.ai-card{margin:0 18px 14px;background:var(--dark);border-radius:22px;padding:18px 20px;position:relative;overflow:hidden;flex-shrink:0;}
+.ai-glow{position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(30,122,82,.4) 0%,transparent 70%);border-radius:50%;pointer-events:none;}
+.ai-lbl{display:flex;align-items:center;gap:7px;margin-bottom:8px;}
+.ai-dot{width:8px;height:8px;background:var(--green);border-radius:50%;animation:ap 2s infinite;}
+@keyframes ap{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.8)}}
+.ai-lbl-t{font-size:10px;font-weight:700;color:var(--green);letter-spacing:1.8px;text-transform:uppercase;}
+.ai-hl{font-family:'Lora',serif;font-size:14.5px;color:rgba(255,255,255,.87);line-height:1.5;margin-bottom:14px;}
+.ai-hl strong{color:#fff;font-weight:700;}
+.ai-btns{display:flex;gap:8px;}
+.ai-btn{flex:1;padding:10px;border-radius:12px;font-size:12px;font-weight:700;border:none;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .16s;}
+.ai-btn:active{transform:scale(.96);}
+.ai-prim{background:var(--green);color:#fff;}
+.ai-ghost{background:rgba(255,255,255,.09);color:rgba(255,255,255,.85);}
+
+.stats-row{display:flex;gap:9px;margin:0 18px 14px;flex-shrink:0;}
+.stat-c{flex:1;background:var(--card);border-radius:16px;padding:12px;border:1px solid var(--border);}
+.stat-v{font-family:'Lora',serif;font-size:21px;font-weight:700;color:var(--dark);}
+.stat-l{font-size:10.5px;color:var(--gray);margin-top:1px;font-weight:500;}
+.stat-d{font-size:10.5px;color:var(--green);font-weight:700;margin-top:4px;}
+
+.leads-list{padding:0 18px 20px;display:flex;flex-direction:column;gap:9px;}
+.lead-row{display:flex;align-items:center;background:var(--card);border-radius:16px;padding:13px 14px;border:1px solid var(--border);gap:11px;cursor:pointer;transition:all .18s;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.lead-row:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(0,0,0,.08);}
+.lead-row:active{transform:scale(.985);}
+.av{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;}
+.li{flex:1;min-width:0;}
+.ln{font-size:13.5px;font-weight:650;color:var(--dark);margin-bottom:2px;}
+.ld{font-size:11.5px;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.badge{font-size:9.5px;font-weight:800;padding:4px 9px;border-radius:8px;letter-spacing:.4px;flex-shrink:0;}
+.b-hot{background:#fef2f2;color:var(--red);}
+.b-warm{background:#fffbeb;color:var(--amber);}
+.b-new{background:var(--green-l);color:var(--green-d);}
+.b-act{background:#eff6ff;color:var(--blue);}
+
+/* ===== LISTINGS ===== */
+.listings-list{padding:0 18px 20px;display:flex;flex-direction:column;gap:13px;}
+.lcard{background:var(--card);border-radius:20px;overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:all .18s;box-shadow:0 3px 14px rgba(0,0,0,.06);}
+.lcard:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,.1);}
+.lcard:active{transform:scale(.99);}
+.limg{height:148px;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.lemoji{font-size:54px;opacity:.2;position:relative;z-index:1;}
+.loverlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 30%,rgba(0,0,0,.42) 100%);}
+.lscore{position:absolute;top:10px;right:10px;font-size:10.5px;font-weight:800;padding:5px 10px;border-radius:9px;color:#fff;z-index:2;}
+.sc-hi{background:rgba(21,92,61,.9);}
+.sc-med{background:rgba(180,100,0,.9);}
+.lbody{padding:14px 15px;}
+.lprice{font-family:'Lora',serif;font-size:19px;font-weight:700;color:var(--dark);}
+.laddr{font-size:12px;color:var(--gray);margin:2px 0 9px;}
+.lmeta{display:flex;gap:12px;margin-bottom:10px;}
+.lmeta span{font-size:11.5px;color:#555;}
+.ltip{background:var(--green-l);border-radius:11px;padding:10px 12px;display:flex;gap:7px;align-items:flex-start;}
+.ltip-t{font-size:11.5px;color:var(--green-d);line-height:1.45;font-weight:500;}
+
+/* ===== MESSAGES ===== */
+.conv-list{padding:0 18px 20px;display:flex;flex-direction:column;gap:8px;}
+.conv-item{display:flex;align-items:center;background:var(--card);border-radius:16px;padding:13px 14px;border:1px solid var(--border);gap:11px;cursor:pointer;transition:all .18s;box-shadow:0 2px 8px rgba(0,0,0,.03);}
+.conv-item:hover{transform:translateY(-1px);box-shadow:0 5px 18px rgba(0,0,0,.08);}
+.conv-item:active{transform:scale(.985);}
+.conv-av{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0;position:relative;}
+.conv-unread-dot{position:absolute;top:-2px;right:-2px;width:11px;height:11px;background:var(--green);border-radius:50%;border:2px solid var(--card);}
+.conv-info{flex:1;min-width:0;}
+.conv-name{font-size:14px;font-weight:650;color:var(--dark);margin-bottom:3px;}
+.conv-preview{font-size:12px;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.conv-preview.unread{color:var(--dark);font-weight:600;}
+.conv-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;}
+.conv-time{font-size:11px;color:#c0c0c5;}
+.conv-badge{background:var(--green);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:100px;}
+
+/* Chat view */
+.chat-view{position:absolute;inset:0;background:var(--bg);border-radius:56px;z-index:500;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);overflow:hidden;}
+.chat-view.open{transform:translateX(0);}
+.chat-header{display:flex;align-items:center;gap:12px;padding:60px 18px 14px;background:var(--card);border-bottom:1px solid var(--border);flex-shrink:0;}
+.chat-back{width:34px;height:34px;background:var(--bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;transition:all .18s;flex-shrink:0;}
+.chat-back:hover{background:#e8e8e8;}
+.chat-av-sm{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;}
+.chat-name{font-size:15px;font-weight:700;color:var(--dark);}
+.chat-status{font-size:11px;color:var(--green);font-weight:500;}
+.chat-ai-btn{margin-left:auto;background:var(--green-l);color:var(--green-d);border:none;border-radius:10px;padding:6px 11px;font-size:11px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .18s;white-space:nowrap;}
+.chat-ai-btn:hover{background:var(--green);color:#fff;}
+
+.chat-messages{flex:1;overflow-y:auto;padding:16px 16px 10px;display:flex;flex-direction:column;gap:10px;scrollbar-width:none;}
+.chat-messages::-webkit-scrollbar{display:none;}
+
+.msg-wrap{display:flex;flex-direction:column;gap:3px;}
+.msg-wrap.them{align-items:flex-start;}
+.msg-wrap.me{align-items:flex-end;}
+.msg-bubble{max-width:72%;padding:11px 14px;border-radius:20px;font-size:13.5px;line-height:1.45;word-wrap:break-word;}
+.msg-wrap.them .msg-bubble{background:var(--card);color:var(--dark);border:1px solid var(--border);border-bottom-left-radius:6px;}
+.msg-wrap.me .msg-bubble{background:var(--green);color:#fff;border-bottom-right-radius:6px;}
+.msg-time{font-size:10px;color:#c0c0c5;margin:0 4px;}
+.msg-sender{font-size:10.5px;font-weight:600;color:var(--gray);margin:0 4px 1px;}
+
+.ai-suggestion{margin:4px 0;background:rgba(30,122,82,.08);border:1.5px dashed rgba(30,122,82,.3);border-radius:14px;padding:11px 13px;}
+.ai-sug-lbl{font-size:9.5px;font-weight:800;color:var(--green);letter-spacing:1.3px;text-transform:uppercase;margin-bottom:5px;}
+.ai-sug-text{font-size:12.5px;color:#2a2a2a;line-height:1.45;}
+.ai-sug-use{margin-top:8px;background:var(--green);color:#fff;border:none;border-radius:9px;padding:7px 13px;font-size:11.5px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .16s;}
+.ai-sug-use:hover{background:var(--green-d);}
+
+.chat-input-area{padding:10px 14px 20px;background:var(--card);border-top:1px solid var(--border);flex-shrink:0;}
+.chat-input-row{display:flex;align-items:center;gap:9px;}
+.chat-input{flex:1;background:var(--bg);border:1.5px solid var(--border);border-radius:22px;padding:10px 16px;font-family:'DM Sans',sans-serif;font-size:13.5px;color:var(--dark);outline:none;transition:border-color .18s;}
+.chat-input:focus{border-color:var(--green);}
+.chat-send{width:40px;height:40px;background:var(--green);border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .18s;flex-shrink:0;font-size:16px;}
+.chat-send:hover{background:var(--green-d);transform:scale(1.05);}
+.chat-send:active{transform:scale(.95);}
+.chat-ai-suggest-btn{background:none;border:none;cursor:pointer;font-size:20px;padding:4px;transition:transform .18s;flex-shrink:0;}
+.chat-ai-suggest-btn:hover{transform:scale(1.2);}
+
+/* ===== FOLLOW-UPS ===== */
+.fu-list{padding:0 18px 20px;display:flex;flex-direction:column;gap:11px;}
+.fu-card{background:var(--card);border-radius:18px;overflow:hidden;border:1px solid var(--border);box-shadow:0 2px 10px rgba(0,0,0,.04);}
+.fu-top{display:flex;justify-content:space-between;align-items:flex-start;padding:15px 15px 11px;}
+.fu-nm{font-size:14px;font-weight:650;color:var(--dark);margin-bottom:2px;}
+.fu-prop{font-size:12px;color:var(--gray);}
+.fu-tm{font-size:11px;color:#c0c0c5;font-weight:500;}
+.fu-draft{margin:0 15px 11px;background:var(--bg);border-radius:12px;padding:12px;}
+.fu-dlbl{font-size:9.5px;font-weight:800;color:var(--green);letter-spacing:1.4px;text-transform:uppercase;margin-bottom:6px;}
+.fu-dtxt{font-size:12.5px;color:#2a2a2a;line-height:1.5;}
+.fu-acts{display:flex;gap:8px;padding:0 15px 15px;}
+.fu-btn{flex:1;padding:10px;border-radius:12px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:all .16s;}
+.fu-btn:active{transform:scale(.96);}
+.fu-send{background:var(--dark);color:#fff;}
+.fu-send:hover{background:var(--green);}
+.fu-sent{background:var(--green);color:#fff;cursor:default;}
+.fu-edit{background:#efefef;color:#333;}
+.fu-edit:hover{background:#e4e4e4;}
+
+/* ===== PROFILE ===== */
+.profile-hero{margin:0 18px 16px;background:var(--dark);border-radius:22px;padding:22px;display:flex;align-items:center;gap:15px;position:relative;overflow:hidden;}
+.profile-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:140px;height:140px;background:radial-gradient(circle,rgba(30,122,82,.35) 0%,transparent 70%);pointer-events:none;}
+.profile-av{width:64px;height:64px;border-radius:20px;background:linear-gradient(135deg,var(--green),var(--green-d));display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:#fff;flex-shrink:0;}
+.profile-info{flex:1;}
+.profile-name{font-family:'Lora',serif;font-size:20px;font-weight:700;color:#fff;}
+.profile-role{font-size:12px;color:rgba(255,255,255,.55);margin-top:2px;}
+.profile-edit-btn{background:rgba(255,255,255,.1);border:none;color:rgba(255,255,255,.7);font-size:11px;font-weight:600;padding:6px 12px;border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:8px;transition:all .18s;}
+.profile-edit-btn:hover{background:rgba(255,255,255,.18);}
+
+.perf-row{display:flex;gap:9px;margin:0 18px 16px;}
+.perf-c{flex:1;background:var(--card);border-radius:16px;padding:13px;border:1px solid var(--border);text-align:center;}
+.perf-v{font-family:'Lora',serif;font-size:20px;font-weight:700;color:var(--dark);}
+.perf-l{font-size:10px;color:var(--gray);margin-top:2px;font-weight:500;}
+
+.settings-list{padding:0 18px 20px;display:flex;flex-direction:column;gap:3px;}
+.setting-group{background:var(--card);border-radius:16px;border:1px solid var(--border);overflow:hidden;margin-bottom:8px;}
+.setting-row{display:flex;align-items:center;padding:14px 16px;gap:12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;}
+.setting-row:last-child{border-bottom:none;}
+.setting-row:hover{background:#f8f8f6;}
+.setting-icon{font-size:18px;width:28px;text-align:center;flex-shrink:0;}
+.setting-label{flex:1;font-size:13.5px;font-weight:500;color:var(--dark);}
+.setting-val{font-size:12px;color:var(--gray);}
+.setting-arr{color:#c0c0c5;font-size:13px;}
+.toggle{width:44px;height:26px;background:var(--green);border-radius:13px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;}
+.toggle::after{content:'';position:absolute;top:3px;right:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:right .2s;box-shadow:0 1px 4px rgba(0,0,0,.2);}
+.toggle.off{background:#ddd;}
+.toggle.off::after{right:21px;}
+
+
+/* ===== AI SCORE BREAKDOWN OVERLAY ===== */
+
+.score-view-btn{width:100%;margin-top:10px;padding:10px;background:var(--dark);color:#fff;border:none;border-radius:12px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .18s;letter-spacing:.2px;}
+.score-view-btn:hover{background:var(--green);}
+.score-view-btn:active{transform:scale(.98);}
+
+.score-overlay{position:absolute;inset:0;background:var(--bg);border-radius:56px;z-index:600;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);overflow:hidden;}
+.score-overlay.open{transform:translateX(0);}
+.score-ov-header{display:flex;align-items:center;gap:12px;padding:60px 18px 16px;background:var(--card);border-bottom:1px solid var(--border);flex-shrink:0;}
+.score-ov-back{width:34px;height:34px;background:var(--bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;transition:all .18s;flex-shrink:0;}
+.score-ov-back:hover{background:#e8e8e8;}
+.score-ov-title{font-family:'Lora',serif;font-size:17px;font-weight:700;color:var(--dark);}
+.score-ov-sub{font-size:11px;color:var(--gray);margin-top:1px;}
+.score-ov-body{flex:1;overflow-y:auto;padding:18px 18px 30px;scrollbar-width:none;}
+.score-ov-body::-webkit-scrollbar{display:none;}
+
+/* Big score circle */
+.score-hero{display:flex;flex-direction:column;align-items:center;padding:20px 0 22px;}
+.score-ring-wrap{position:relative;width:120px;height:120px;margin-bottom:12px;}
+.score-ring-wrap svg{transform:rotate(-90deg);}
+.score-ring-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.score-ring-val{font-family:'Lora',serif;font-size:34px;font-weight:700;color:var(--dark);line-height:1;}
+.score-ring-lbl{font-size:10px;color:var(--gray);font-weight:600;margin-top:2px;}
+.score-grade{font-size:13px;font-weight:700;padding:5px 14px;border-radius:100px;margin-bottom:4px;}
+.score-grade-a{background:#dcfce7;color:#15803d;}
+.score-grade-b{background:#fef9c3;color:#a16207;}
+.score-grade-c{background:#fee2e2;color:#b91c1c;}
+.score-updated{font-size:11px;color:var(--gray);}
+
+/* Category breakdown */
+.score-section-title{font-size:10.5px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+.score-categories{display:flex;flex-direction:column;gap:10px;margin-bottom:18px;}
+.score-cat{background:var(--card);border-radius:16px;padding:14px;border:1px solid var(--border);}
+.score-cat-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.score-cat-left{display:flex;align-items:center;gap:8px;}
+.score-cat-icon{font-size:17px;}
+.score-cat-name{font-size:13px;font-weight:650;color:var(--dark);}
+.score-cat-weight{font-size:10px;color:var(--gray);margin-top:1px;}
+.score-cat-pts{font-size:14px;font-weight:800;font-family:'Lora',serif;}
+.score-cat-pts.good{color:var(--green);}
+.score-cat-pts.mid{color:var(--amber);}
+.score-cat-pts.bad{color:var(--red);}
+.score-bar-bg{height:6px;background:#f0f0ec;border-radius:3px;overflow:hidden;}
+.score-bar-fill{height:100%;border-radius:3px;transition:width .6s cubic-bezier(.25,.46,.45,.94);}
+.score-bar-fill.good{background:var(--green);}
+.score-bar-fill.mid{background:var(--amber);}
+.score-bar-fill.bad{background:var(--red);}
+.score-cat-detail{font-size:11.5px;color:var(--gray);margin-top:7px;line-height:1.45;}
+.score-cat-detail strong{color:var(--dark);font-weight:650;}
+
+/* Improve tips */
+.score-improve{background:var(--dark);border-radius:16px;padding:16px;margin-bottom:16px;}
+.score-improve-title{font-size:10px;font-weight:700;color:var(--green);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.score-improve-item{display:flex;gap:9px;align-items:flex-start;margin-bottom:10px;}
+.score-improve-item:last-child{margin-bottom:0;}
+.score-improve-num{width:20px;height:20px;background:rgba(30,122,82,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--green);flex-shrink:0;margin-top:1px;}
+.score-improve-text{font-size:12px;color:rgba(255,255,255,.8);line-height:1.45;}
+.score-improve-text strong{color:#fff;}
+
+.score-recalc-btn{width:100%;padding:14px;background:var(--green);color:#fff;border:none;border-radius:15px;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .18s;}
+.score-recalc-btn:hover{background:var(--green-d);}
+.score-recalc-btn:active{transform:scale(.98);}
+
+/* ===== NAV BAR ===== */
+.nav{display:flex;background:rgba(242,241,236,.97);backdrop-filter:blur(20px);border-top:1px solid rgba(0,0,0,.08);padding:8px 4px 28px;flex-shrink:0;}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:6px 2px;border-radius:12px;transition:all .18s;position:relative;}
+.ni:hover{background:rgba(0,0,0,.03);}
+.ni-icon{font-size:22px;transition:transform .2s cubic-bezier(.34,1.56,.64,1);filter:grayscale(1) opacity(.35);}
+.ni.active .ni-icon{transform:scale(1.12);filter:none;}
+.ni-lbl{font-size:9.5px;font-weight:600;color:var(--gray);letter-spacing:.2px;transition:color .18s;}
+.ni.active .ni-lbl{color:var(--green);}
+.ni-pip{width:4px;height:4px;background:var(--green);border-radius:50%;opacity:0;transition:opacity .2s;}
+.ni.active .ni-pip{opacity:1;}
+.ni-badge{position:absolute;top:2px;right:6px;background:var(--red);color:#fff;font-size:9px;font-weight:800;padding:1px 5px;border-radius:100px;min-width:16px;text-align:center;}
+
+/* Toast */
+.toast{position:absolute;bottom:100px;left:50%;transform:translateX(-50%) translateY(14px);background:rgba(17,17,17,.92);backdrop-filter:blur(12px);color:#fff;font-size:13px;font-weight:600;padding:11px 20px;border-radius:100px;white-space:nowrap;opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);z-index:600;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* Listing detail overlay */
+.lov{position:absolute;inset:0;background:var(--bg);border-radius:56px;z-index:400;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .38s cubic-bezier(.32,.72,0,1);overflow:hidden;}
+.lov.open{transform:translateY(0);}
+.lov-img{height:200px;position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.lov-emoji{font-size:80px;opacity:.18;}
+.lov-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,var(--bg) 100%);}
+.lov-back{position:absolute;top:58px;left:16px;width:34px;height:34px;background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;z-index:10;transition:all .18s;box-shadow:0 2px 10px rgba(0,0,0,.12);}
+.lov-back:hover{background:#fff;}
+.lov-body{flex:1;overflow-y:auto;padding:0 20px 28px;scrollbar-width:none;}
+.lov-body::-webkit-scrollbar{display:none;}
+.lov-price{font-family:'Lora',serif;font-size:28px;font-weight:700;color:var(--dark);margin-bottom:3px;}
+.lov-addr{font-size:13px;color:var(--gray);margin-bottom:16px;}
+.lov-score-pill{display:inline-flex;align-items:center;gap:7px;background:var(--green-l);border-radius:100px;padding:7px 14px;margin-bottom:16px;}
+.lov-sn{font-family:'Lora',serif;font-size:20px;font-weight:700;color:var(--green-d);}
+.lov-sl{font-size:11px;color:var(--green);font-weight:600;}
+.lov-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:16px;}
+.lov-stat{background:var(--card);border-radius:13px;padding:11px;text-align:center;border:1px solid var(--border);}
+.lov-sv{font-size:15px;font-weight:700;color:var(--dark);}
+.lov-sl2{font-size:10px;color:var(--gray);margin-top:2px;}
+.sec-t{font-size:10.5px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:1px;margin-bottom:9px;}
+.lov-tip{background:var(--green-l);border-radius:13px;padding:13px;margin-bottom:16px;display:flex;gap:9px;}
+.lov-tip-t{font-size:12.5px;color:var(--green-d);line-height:1.5;font-weight:500;}
+.lov-opt-btn{width:100%;padding:14px;background:var(--dark);color:#fff;border:none;border-radius:15px;font-size:14px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .18s;}
+.lov-opt-btn:hover{background:var(--green);}
+
+/* Edit modal */
+.emod{position:absolute;inset:0;background:rgba(0,0,0,.4);border-radius:56px;z-index:700;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .28s;}
+.emod.open{opacity:1;pointer-events:all;}
+.esheet{background:#fff;border-radius:28px 28px 56px 56px;width:100%;padding:18px 18px 36px;transform:translateY(100%);transition:transform .38s cubic-bezier(.32,.72,0,1);}
+.emod.open .esheet{transform:translateY(0);}
+.ehandle{width:36px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 16px;}
+.etitle{font-size:15px;font-weight:700;color:var(--dark);margin-bottom:3px;}
+.esub{font-size:12px;color:var(--gray);margin-bottom:12px;}
+.etarea{width:100%;height:125px;background:var(--bg);border:1.5px solid var(--border);border-radius:13px;padding:11px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--dark);resize:none;outline:none;line-height:1.5;margin-bottom:11px;transition:border-color .18s;}
+.etarea:focus{border-color:var(--green);}
+.eacts{display:flex;gap:8px;}
+.esave{flex:2;padding:12px;background:var(--dark);color:#fff;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .18s;}
+.esave:hover{background:var(--green);}
+.ecancel{flex:1;padding:12px;background:#f0f0f0;color:#555;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
+.ecancel:hover{background:#e6e6e6;}
+</style>
+</head>
+<body>
+
+<div class="top-label">
+  <div class="blink"></div>
+  <span>PropAI · iPhone 17 Simulator</span>
+  <div class="blink"></div>
+</div>
+
+<div class="iphone-wrap">
+<div class="iphone">
+  <div class="di"></div>
+  <div class="screen">
+
+    <!-- STATUS BAR -->
+    <div class="sb">
+      <div class="sb-time" id="clock">9:41</div>
+      <div class="sb-r"><span>▲▲▲</span><span>WiFi</span><span>🔋</span></div>
+    </div>
+
+    <!-- ============ DASHBOARD ============ -->
+    <div id="pg-dashboard" class="page active">
+      <div class="ph">
+        <div class="ph-greet">Good morning</div>
+        <div class="ph-title">Sarah <em>Mitchell</em></div>
+      </div>
+      <div class="scroll">
+        <div class="ai-card">
+          <div class="ai-glow"></div>
+          <div class="ai-lbl"><div class="ai-dot"></div><div class="ai-lbl-t">PropAI Insight</div></div>
+          <div class="ai-hl"><strong>3 leads</strong> haven't heard from you in 5+ days. Close rate drops 40% after day 7.</div>
+          <div class="ai-btns">
+            <button class="ai-btn ai-prim" onclick="goTo('followups')">Send Follow-ups</button>
+            <button class="ai-btn ai-ghost" onclick="toast('⏰ Snoozed for tomorrow')">Snooze</button>
+          </div>
+        </div>
+        <div class="stats-row">
+          <div class="stat-c"><div class="stat-v">12</div><div class="stat-l">Active Leads</div><div class="stat-d">↑ 3 this week</div></div>
+          <div class="stat-c"><div class="stat-v">4</div><div class="stat-l">Listings</div><div class="stat-d">2 optimized</div></div>
+          <div class="stat-c"><div class="stat-v">68%</div><div class="stat-l">Response Rate</div><div class="stat-d">↑ 12%</div></div>
+        </div>
+        <div class="sec-label">Priority Leads</div>
+        <div class="leads-list">
+          <div class="lead-row" onclick="goTo('messages')">
+            <div class="av" style="background:#fef2f2;color:#dc2626;">JR</div>
+            <div class="li"><div class="ln">James Rodriguez</div><div class="ld">842 Elm St · Last contact 8 days ago</div></div>
+            <div class="badge b-hot">HOT</div>
+          </div>
+          <div class="lead-row" onclick="goTo('messages')">
+            <div class="av" style="background:#fffbeb;color:#d97706;">AK</div>
+            <div class="li"><div class="ln">Aisha Kamara</div><div class="ld">Toured 3 properties · Awaiting decision</div></div>
+            <div class="badge b-warm">WARM</div>
+          </div>
+          <div class="lead-row" onclick="goTo('messages')">
+            <div class="av" style="background:#e8f5ee;color:#155c3d;">TN</div>
+            <div class="li"><div class="ln">Thomas Ng</div><div class="ld">First inquiry · $1.2M budget · Urgent</div></div>
+            <div class="badge b-new">NEW</div>
+          </div>
+          <div class="lead-row" onclick="goTo('messages')">
+            <div class="av" style="background:#eff6ff;color:#2563eb;">DL</div>
+            <div class="li"><div class="ln">David Lin</div><div class="ld">Cash buyer · $2.4M range · Active search</div></div>
+            <div class="badge b-act">ACTIVE</div>
+          </div>
+          <div class="lead-row" onclick="goTo('messages')">
+            <div class="av" style="background:#f5f3ff;color:#7c3aed;">MB</div>
+            <div class="li"><div class="ln">Maria Benson</div><div class="ld">Pre-approved · Viewing Friday</div></div>
+            <div class="badge b-warm">WARM</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ LISTINGS ============ -->
+    <div id="pg-listings" class="page">
+      <div class="ph">
+        <div class="ph-title">Listings</div>
+        <div class="ph-sub">AI scores updated hourly</div>
+      </div>
+      <div class="scroll">
+        <div class="listings-list">
+          <div class="lcard" onclick="openDetail(0)">
+            <div class="limg">
+              <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MDAiIGhlaWdodD0iMzAwIiB2aWV3Qm94PSIwIDAgNjAwIDMwMCI+CiAgPCEtLSBTa3kgZ3JhZGllbnQgLS0+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InNreTEiIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzg3Q0VFQiIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNFMEY0RkYiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9Imxhd24xIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM1YThhM2MiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjM2Q2YjI1Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJ3YWxsMSIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjZThkNWIwIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI2Q0Yjg5NiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0icm9vZjEiIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzVjM2QxZSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMzZDI2MTAiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDwhLS0gU2t5IC0tPgogIDxyZWN0IHdpZHRoPSI2MDAiIGhlaWdodD0iMzAwIiBmaWxsPSJ1cmwoI3NreTEpIi8+CiAgPCEtLSBDbG91ZHMgLS0+CiAgPGVsbGlwc2UgY3g9IjEyMCIgY3k9IjUwIiByeD0iNTAiIHJ5PSIyMCIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuODUiLz4KICA8ZWxsaXBzZSBjeD0iMTUwIiBjeT0iNDUiIHJ4PSI0MCIgcnk9IjIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC44NSIvPgogIDxlbGxpcHNlIGN4PSI5MCIgY3k9IjU1IiByeD0iMzUiIHJ5PSIxNiIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuODUiLz4KICA8ZWxsaXBzZSBjeD0iNDUwIiBjeT0iNjAiIHJ4PSI2MCIgcnk9IjIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC44Ii8+CiAgPGVsbGlwc2UgY3g9IjQ5MCIgY3k9IjU1IiByeD0iNDUiIHJ5PSIyMCIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuOCIvPgogIDwhLS0gVHJlZXMgYmFja2dyb3VuZCAtLT4KICA8cmVjdCB4PSIyMCIgeT0iMTAwIiB3aWR0aD0iMTgiIGhlaWdodD0iODAiIGZpbGw9IiM1YTNhMWEiLz4KICA8ZWxsaXBzZSBjeD0iMjkiIGN5PSI5NSIgcng9IjMwIiByeT0iNDUiIGZpbGw9IiMyZDVhMWIiLz4KICA8ZWxsaXBzZSBjeD0iMjkiIGN5PSI4MCIgcng9IjIyIiByeT0iMzIiIGZpbGw9IiMzYTdhMjIiLz4KICA8cmVjdCB4PSI1MjAiIHk9IjExMCIgd2lkdGg9IjE2IiBoZWlnaHQ9IjcwIiBmaWxsPSIjNWEzYTFhIi8+CiAgPGVsbGlwc2UgY3g9IjUyOCIgY3k9IjEwNSIgcng9IjI4IiByeT0iNDAiIGZpbGw9IiMyZDVhMWIiLz4KICA8ZWxsaXBzZSBjeD0iNTI4IiBjeT0iOTIiIHJ4PSIyMCIgcnk9IjI4IiBmaWxsPSIjM2E3YTIyIi8+CiAgPCEtLSBMYXduIC0tPgogIDxyZWN0IHg9IjAiIHk9IjIyMCIgd2lkdGg9IjYwMCIgaGVpZ2h0PSI4MCIgZmlsbD0idXJsKCNsYXduMSkiLz4KICA8cmVjdCB4PSIwIiB5PSIyNDAiIHdpZHRoPSI2MDAiIGhlaWdodD0iNjAiIGZpbGw9IiM0YTdhMzAiLz4KICA8IS0tIERyaXZld2F5IC0tPgogIDxwb2x5Z29uIHBvaW50cz0iMjUwLDMwMCAzNTAsMzAwIDMyMCwyMzAgMjgwLDIzMCIgZmlsbD0iI2IwYTA5MCIvPgogIDwhLS0gTWFpbiBob3VzZSBib2R5IC0tPgogIDxyZWN0IHg9IjEwMCIgeT0iMTQwIiB3aWR0aD0iNDAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0idXJsKCN3YWxsMSkiLz4KICA8IS0tIFJvb2YgLS0+CiAgPHBvbHlnb24gcG9pbnRzPSI4MCwxNDAgMzAwLDcwIDUyMCwxNDAiIGZpbGw9InVybCgjcm9vZjEpIi8+CiAgPHBvbHlnb24gcG9pbnRzPSI4MCwxNDAgMzAwLDcyIDUyMCwxNDAgNTEwLDE0MCAzMDAsODIgOTAsMTQwIiBmaWxsPSIjNGEyZTEyIi8+CiAgPCEtLSBSb29mIHRyaW0gLS0+CiAgPGxpbmUgeDE9IjgwIiB5MT0iMTQwIiB4Mj0iMzAwIiB5Mj0iNzAiIHN0cm9rZT0iIzNkMjYxMCIgc3Ryb2tlLXdpZHRoPSIzIi8+CiAgPGxpbmUgeDE9IjMwMCIgeTE9IjcwIiB4Mj0iNTIwIiB5Mj0iMTQwIiBzdHJva2U9IiMzZDI2MTAiIHN0cm9rZS13aWR0aD0iMyIvPgogIDwhLS0gQ2hpbW5leSAtLT4KICA8cmVjdCB4PSIzODAiIHk9IjgwIiB3aWR0aD0iMzAiIGhlaWdodD0iNjAiIGZpbGw9IiM4YTYwNDAiLz4KICA8cmVjdCB4PSIzNzYiIHk9Ijc2IiB3aWR0aD0iMzgiIGhlaWdodD0iOCIgZmlsbD0iIzZhNDgzMCIvPgogIDwhLS0gR2FyYWdlIC0tPgogIDxyZWN0IHg9IjM0MCIgeT0iMTcwIiB3aWR0aD0iMTIwIiBoZWlnaHQ9IjcwIiBmaWxsPSIjZDRiODk2Ii8+CiAgPHJlY3QgeD0iMzQwIiB5PSIxNzAiIHdpZHRoPSIxMjAiIGhlaWdodD0iNzAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2IwOTA3MCIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPCEtLSBHYXJhZ2UgZG9vciBwYW5lbHMgLS0+CiAgPGxpbmUgeDE9IjM0MCIgeTE9IjE5MyIgeDI9IjQ2MCIgeTI9IjE5MyIgc3Ryb2tlPSIjYjA5MDcwIiBzdHJva2Utd2lkdGg9IjEuNSIvPgogIDxsaW5lIHgxPSIzNDAiIHkxPSIyMTYiIHgyPSI0NjAiIHkyPSIyMTYiIHN0cm9rZT0iI2IwOTA3MCIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICA8bGluZSB4MT0iNDAwIiB5MT0iMTcwIiB4Mj0iNDAwIiB5Mj0iMjQwIiBzdHJva2U9IiNiMDkwNzAiIHN0cm9rZS13aWR0aD0iMS41Ii8+CiAgPCEtLSBGcm9udCBkb29yIC0tPgogIDxyZWN0IHg9IjIzMCIgeT0iMTc1IiB3aWR0aD0iNTAiIGhlaWdodD0iNjUiIGZpbGw9IiM3YTQ1MjAiIHJ4PSIzIi8+CiAgPHJlY3QgeD0iMjM1IiB5PSIxODAiIHdpZHRoPSIxOCIgaGVpZ2h0PSIyNSIgZmlsbD0iIzVhMzAxMCIgb3BhY2l0eT0iMC42IiByeD0iMSIvPgogIDxyZWN0IHg9IjI1NyIgeT0iMTgwIiB3aWR0aD0iMTgiIGhlaWdodD0iMjUiIGZpbGw9IiM1YTMwMTAiIG9wYWNpdHk9IjAuNiIgcng9IjEiLz4KICA8Y2lyY2xlIGN4PSIyNzEiIGN5PSIyMTAiIHI9IjMiIGZpbGw9IiNkNGEwMjAiLz4KICA8IS0tIFdpbmRvd3MgbWFpbiBmbG9vciAtLT4KICA8cmVjdCB4PSIxMTUiIHk9IjE2MCIgd2lkdGg9IjU1IiBoZWlnaHQ9IjQ1IiBmaWxsPSIjYzhlNGY4IiByeD0iMiIvPgogIDxyZWN0IHg9IjExNyIgeT0iMTYyIiB3aWR0aD0iMjQiIGhlaWdodD0iNDEiIGZpbGw9IiNiMGQ4ZjUiIHJ4PSIxIi8+CiAgPHJlY3QgeD0iMTQzIiB5PSIxNjIiIHdpZHRoPSIyNSIgaGVpZ2h0PSI0MSIgZmlsbD0iI2IwZDhmNSIgcng9IjEiLz4KICA8cmVjdCB4PSIxMTUiIHk9IjE2MCIgd2lkdGg9IjU1IiBoZWlnaHQ9IjQ1IiBmaWxsPSJub25lIiBzdHJva2U9IiM4YTYwNDAiIHN0cm9rZS13aWR0aD0iMiIgcng9IjIiLz4KICA8cmVjdCB4PSI0NzAiIHk9IjE2MCIgd2lkdGg9IjU1IiBoZWlnaHQ9IjQ1IiBmaWxsPSIjYzhlNGY4IiByeD0iMiIvPgogIDxyZWN0IHg9IjQ3MiIgeT0iMTYyIiB3aWR0aD0iMjQiIGhlaWdodD0iNDEiIGZpbGw9IiNiMGQ4ZjUiIHJ4PSIxIi8+CiAgPHJlY3QgeD0iNDk4IiB5PSIxNjIiIHdpZHRoPSIyNSIgaGVpZ2h0PSI0MSIgZmlsbD0iI2IwZDhmNSIgcng9IjEiLz4KICA8cmVjdCB4PSI0NzAiIHk9IjE2MCIgd2lkdGg9IjU1IiBoZWlnaHQ9IjQ1IiBmaWxsPSJub25lIiBzdHJva2U9IiM4YTYwNDAiIHN0cm9rZS13aWR0aD0iMiIgcng9IjIiLz4KICA8IS0tIFBvcmNoIC0tPgogIDxyZWN0IHg9IjE5MCIgeT0iMjI1IiB3aWR0aD0iMTMwIiBoZWlnaHQ9IjE1IiBmaWxsPSIjYzhhODcwIi8+CiAgPHJlY3QgeD0iMTk1IiB5PSIyMTUiIHdpZHRoPSI4IiBoZWlnaHQ9IjIwIiBmaWxsPSIjYjA5MDYwIi8+CiAgPHJlY3QgeD0iMzEyIiB5PSIyMTUiIHdpZHRoPSI4IiBoZWlnaHQ9IjIwIiBmaWxsPSIjYjA5MDYwIi8+CiAgPCEtLSBTdGVwcyAtLT4KICA8cmVjdCB4PSIyMTUiIHk9IjIzNSIgd2lkdGg9IjgwIiBoZWlnaHQ9IjgiIGZpbGw9IiNiMDk4NzAiIHJ4PSIxIi8+CiAgPHJlY3QgeD0iMjIwIiB5PSIyNDIiIHdpZHRoPSI3MCIgaGVpZ2h0PSI4IiBmaWxsPSIjYTA4ODYwIiByeD0iMSIvPgogIDwhLS0gTGFuZHNjYXBpbmcgLS0+CiAgPGVsbGlwc2UgY3g9IjE2MCIgY3k9IjIzMCIgcng9IjI1IiByeT0iMTUiIGZpbGw9IiMzYTdhMjIiLz4KICA8ZWxsaXBzZSBjeD0iNDQwIiBjeT0iMjMwIiByeD0iMjUiIHJ5PSIxNSIgZmlsbD0iIzNhN2EyMiIvPgogIDxlbGxpcHNlIGN4PSIxMzAiIGN5PSIyMzUiIHJ4PSIxOCIgcnk9IjEyIiBmaWxsPSIjMmQ2MDE4Ii8+CiAgPGVsbGlwc2UgY3g9IjQ3MCIgY3k9IjIzNSIgcng9IjE4IiByeT0iMTIiIGZpbGw9IiMyZDYwMTgiLz4KICA8IS0tIEZsb3dlcnMgLS0+CiAgPGNpcmNsZSBjeD0iMTU1IiBjeT0iMjIyIiByPSI0IiBmaWxsPSIjZmY2YjlkIi8+CiAgPGNpcmNsZSBjeD0iMTY1IiBjeT0iMjIwIiByPSIzIiBmaWxsPSIjZmZiMzQ3Ii8+CiAgPGNpcmNsZSBjeD0iNDQ1IiBjeT0iMjIyIiByPSI0IiBmaWxsPSIjZmY2YjlkIi8+CiAgPGNpcmNsZSBjeD0iNDM1IiBjeT0iMjIwIiByPSIzIiBmaWxsPSIjZmZiMzQ3Ii8+CiAgPCEtLSBTaGFkb3cgdW5kZXIgaG91c2UgLS0+CiAgPHJlY3QgeD0iMTAwIiB5PSIyMzgiIHdpZHRoPSI0MDAiIGhlaWdodD0iNCIgZmlsbD0iIzAwMDAwMDIwIi8+Cjwvc3ZnPg==" alt="842 Elm Street" style="width:100%;height:100%;object-fit:cover;display:block;">
+              <div class="loverlay"></div>
+              <div class="lscore sc-hi">AI Score 94/100</div>
+            </div>
+            <div class="lbody">
+              <div class="lprice">$1,249,000</div><div class="laddr">842 Elm Street, Palo Alto, CA</div>
+              <div class="lmeta"><span>🛏 4 bd</span><span>🚿 3 ba</span><span>📐 2,340 sqft</span></div>
+              <div class="ltip"><span>✨</span><div class="ltip-t">Top performer. Add twilight photos — sells 21% faster in this zip.</div></div>
+              <button class="score-view-btn" onclick="event.stopPropagation();openScoreBreakdown(0)">✦ View AI Score Breakdown</button>
+            </div>
+          </div>
+          <div class="lcard" onclick="openDetail(1)">
+            <div class="limg">
+              <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MDAiIGhlaWdodD0iMzAwIiB2aWV3Qm94PSIwIDAgNjAwIDMwMCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InNreTIiIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI2M5ZThmNSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNlYWY2ZmYiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9IndhbGwyIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNmNWY1ZjIiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjZThlOGU0Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8cmVjdCB3aWR0aD0iNjAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0idXJsKCNza3kyKSIvPgogIDwhLS0gQ2xvdWRzIHN1YnRsZSAtLT4KICA8ZWxsaXBzZSBjeD0iNTAwIiBjeT0iNDAiIHJ4PSI3MCIgcnk9IjE4IiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC43Ii8+CiAgPGVsbGlwc2UgY3g9IjgwIiBjeT0iNTUiIHJ4PSI1NSIgcnk9IjE1IiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC42Ii8+CiAgPCEtLSBHcm91bmQgLS0+CiAgPHJlY3QgeD0iMCIgeT0iMjM1IiB3aWR0aD0iNjAwIiBoZWlnaHQ9IjY1IiBmaWxsPSIjNWE4YTNjIi8+CiAgPHJlY3QgeD0iMCIgeT0iMjQ4IiB3aWR0aD0iNjAwIiBoZWlnaHQ9IjUyIiBmaWxsPSIjNGE3ODI4Ii8+CiAgPCEtLSBEcml2ZXdheSBtb2Rlcm4gLS0+CiAgPHBvbHlnb24gcG9pbnRzPSIyMjAsMzAwIDM4MCwzMDAgMzYwLDI0MCAyNDAsMjQwIiBmaWxsPSIjYzhjMGI4Ii8+CiAgPGxpbmUgeDE9IjMwMCIgeTE9IjI0MCIgeDI9IjMwMCIgeTI9IjMwMCIgc3Ryb2tlPSIjYjhiMGE4IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1kYXNoYXJyYXk9IjgsNiIvPgogIDwhLS0gTWFpbiBzdHJ1Y3R1cmUgLSBtb2Rlcm4gZmxhdCByb29mIC0tPgogIDxyZWN0IHg9IjgwIiB5PSIxMzAiIHdpZHRoPSI0NDAiIGhlaWdodD0iMTEwIiBmaWxsPSJ1cmwoI3dhbGwyKSIvPgogIDwhLS0gRmxhdCByb29mIHdpdGggb3ZlcmhhbmcgLS0+CiAgPHJlY3QgeD0iNjAiIHk9IjEyMiIgd2lkdGg9IjQ4MCIgaGVpZ2h0PSIxNSIgZmlsbD0iIzRhNGE0YSIvPgogIDxyZWN0IHg9IjYwIiB5PSIxMjAiIHdpZHRoPSI0ODAiIGhlaWdodD0iOCIgZmlsbD0iIzNhM2EzYSIvPgogIDwhLS0gU2Vjb25kIHN0b3J5IGJveCAtLT4KICA8cmVjdCB4PSIxNjAiIHk9IjcyIiB3aWR0aD0iMjAwIiBoZWlnaHQ9IjU4IiBmaWxsPSIjZjBmMGVjIi8+CiAgPHJlY3QgeD0iMTU1IiB5PSI2NSIgd2lkdGg9IjIxMCIgaGVpZ2h0PSIxMiIgZmlsbD0iIzRhNGE0YSIvPgogIDwhLS0gTGFyZ2UgZmxvb3IgdG8gY2VpbGluZyB3aW5kb3dzIC0tPgogIDxyZWN0IHg9IjkwIiB5PSIxMzgiIHdpZHRoPSIxMTAiIGhlaWdodD0iOTUiIGZpbGw9IiNiOGQ4ZjAiIHJ4PSIxIi8+CiAgPHJlY3QgeD0iOTIiIHk9IjE0MCIgd2lkdGg9IjUzIiBoZWlnaHQ9IjkxIiBmaWxsPSIjYThjY2VjIi8+CiAgPHJlY3QgeD0iMTQ3IiB5PSIxNDAiIHdpZHRoPSI1MSIgaGVpZ2h0PSI5MSIgZmlsbD0iI2E4Y2NlYyIvPgogIDxyZWN0IHg9IjkwIiB5PSIxMzgiIHdpZHRoPSIxMTAiIGhlaWdodD0iOTUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2M4YzhjNCIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPCEtLSBXaW5kb3cgcmVmbGVjdGlvbiBsaW5lcyAtLT4KICA8bGluZSB4MT0iMTA1IiB5MT0iMTQwIiB4Mj0iMTA1IiB5Mj0iMjMzIiBzdHJva2U9IiNjY2UwZjUiIHN0cm9rZS13aWR0aD0iMSIgb3BhY2l0eT0iMC42Ii8+CiAgPGxpbmUgeDE9IjEyMCIgeTE9IjE0MCIgeDI9IjEyMCIgeTI9IjIzMyIgc3Ryb2tlPSIjY2NlMGY1IiBzdHJva2Utd2lkdGg9IjEiIG9wYWNpdHk9IjAuNCIvPgogIDwhLS0gRnJvbnQgZG9vciBtb2Rlcm4gLS0+CiAgPHJlY3QgeD0iMjc1IiB5PSIxNjAiIHdpZHRoPSI1MCIgaGVpZ2h0PSI3NSIgZmlsbD0iIzJhMmEyYSIgcng9IjIiLz4KICA8cmVjdCB4PSIyNzgiIHk9IjE2MyIgd2lkdGg9IjQ0IiBoZWlnaHQ9IjMwIiBmaWxsPSIjMWExYTFhIiBvcGFjaXR5PSIwLjgiLz4KICA8Y2lyY2xlIGN4PSIzMjAiIGN5PSIyMDAiIHI9IjMuNSIgZmlsbD0iI2Q0YTAyMCIvPgogIDwhLS0gU2lkZWxpZ2h0IHdpbmRvd3MgZG9vciAtLT4KICA8cmVjdCB4PSIyNjIiIHk9IjE2MyIgd2lkdGg9IjEyIiBoZWlnaHQ9IjY1IiBmaWxsPSIjYjhkOGYwIiBvcGFjaXR5PSIwLjgiLz4KICA8cmVjdCB4PSIzMjYiIHk9IjE2MyIgd2lkdGg9IjEyIiBoZWlnaHQ9IjY1IiBmaWxsPSIjYjhkOGYwIiBvcGFjaXR5PSIwLjgiLz4KICA8IS0tIFJpZ2h0IHdpbmRvd3MgLS0+CiAgPHJlY3QgeD0iNDAwIiB5PSIxNDUiIHdpZHRoPSI5MCIgaGVpZ2h0PSI3NSIgZmlsbD0iI2I4ZDhmMCIgcng9IjEiLz4KICA8cmVjdCB4PSI0MDIiIHk9IjE0NyIgd2lkdGg9IjQzIiBoZWlnaHQ9IjcxIiBmaWxsPSIjYThjY2VjIi8+CiAgPHJlY3QgeD0iNDQ3IiB5PSIxNDciIHdpZHRoPSI0MSIgaGVpZ2h0PSI3MSIgZmlsbD0iI2E4Y2NlYyIvPgogIDxyZWN0IHg9IjQwMCIgeT0iMTQ1IiB3aWR0aD0iOTAiIGhlaWdodD0iNzUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2M4YzhjNCIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPCEtLSBTZWNvbmQgc3Rvcnkgd2luZG93cyAtLT4KICA8cmVjdCB4PSIxNzAiIHk9Ijc4IiB3aWR0aD0iODAiIGhlaWdodD0iNDIiIGZpbGw9IiNiOGQ4ZjAiIHJ4PSIxIi8+CiAgPHJlY3QgeD0iMTcyIiB5PSI4MCIgd2lkdGg9IjM3IiBoZWlnaHQ9IjM4IiBmaWxsPSIjYThjY2VjIi8+CiAgPHJlY3QgeD0iMjExIiB5PSI4MCIgd2lkdGg9IjM3IiBoZWlnaHQ9IjM4IiBmaWxsPSIjYThjY2VjIi8+CiAgPHJlY3QgeD0iMjY1IiB5PSI3OCIgd2lkdGg9IjgwIiBoZWlnaHQ9IjQyIiBmaWxsPSIjYjhkOGYwIiByeD0iMSIvPgogIDxyZWN0IHg9IjI2NyIgeT0iODAiIHdpZHRoPSIzNyIgaGVpZ2h0PSIzOCIgZmlsbD0iI2E4Y2NlYyIvPgogIDxyZWN0IHg9IjMwNiIgeT0iODAiIHdpZHRoPSIzNyIgaGVpZ2h0PSIzOCIgZmlsbD0iI2E4Y2NlYyIvPgogIDwhLS0gR2FyYWdlIG1vZGVybiAtLT4KICA8cmVjdCB4PSI0MzAiIHk9IjE1NSIgd2lkdGg9IjgwIiBoZWlnaHQ9IjY1IiBmaWxsPSIjZThlOGU0Ii8+CiAgPHJlY3QgeD0iNDMwIiB5PSIxNTUiIHdpZHRoPSI4MCIgaGVpZ2h0PSI2NSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYzhjOGM0IiBzdHJva2Utd2lkdGg9IjIiLz4KICA8bGluZSB4MT0iNDMwIiB5MT0iMTc1IiB4Mj0iNTEwIiB5Mj0iMTc1IiBzdHJva2U9IiNjOGM4YzQiIHN0cm9rZS13aWR0aD0iMS41Ii8+CiAgPGxpbmUgeDE9IjQzMCIgeTE9IjE5NSIgeDI9IjUxMCIgeTI9IjE5NSIgc3Ryb2tlPSIjYzhjOGM0IiBzdHJva2Utd2lkdGg9IjEuNSIvPgogIDxsaW5lIHgxPSI0MzAiIHkxPSIyMTUiIHgyPSI1MTAiIHkyPSIyMTUiIHN0cm9rZT0iI2M4YzhjNCIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICA8IS0tIE1vZGVybiBsYW5kc2NhcGluZyAtLT4KICA8cmVjdCB4PSI4MCIgeT0iMjMwIiB3aWR0aD0iNDQwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjM2E2ODIwIi8+CiAgPCEtLSBPcm5hbWVudGFsIGdyYXNzZXMgLS0+CiAgPGVsbGlwc2UgY3g9IjEwMCIgY3k9IjIzNSIgcng9IjE1IiByeT0iMTAiIGZpbGw9IiM2YTlhNDAiLz4KICA8ZWxsaXBzZSBjeD0iNTAwIiBjeT0iMjM1IiByeD0iMTUiIHJ5PSIxMCIgZmlsbD0iIzZhOWE0MCIvPgogIDwhLS0gTW9kZXJuIGhlZGdlIGJveGVzIC0tPgogIDxyZWN0IHg9IjEzMCIgeT0iMjIyIiB3aWR0aD0iMzUiIGhlaWdodD0iMTgiIGZpbGw9IiM0YTdhMzAiIHJ4PSIyIi8+CiAgPHJlY3QgeD0iNDM1IiB5PSIyMjIiIHdpZHRoPSIzNSIgaGVpZ2h0PSIxOCIgZmlsbD0iIzRhN2EzMCIgcng9IjIiLz4KICA8IS0tIFN0ZXBwaW5nIHN0b25lcyAtLT4KICA8ZWxsaXBzZSBjeD0iMjY1IiBjeT0iMjQ0IiByeD0iMTQiIHJ5PSI2IiBmaWxsPSIjYjhiMGE4Ii8+CiAgPGVsbGlwc2UgY3g9IjMwMCIgY3k9IjI0OCIgcng9IjE0IiByeT0iNiIgZmlsbD0iI2I4YjBhOCIvPgogIDxlbGxpcHNlIGN4PSIzMzUiIGN5PSIyNDQiIHJ4PSIxNCIgcnk9IjYiIGZpbGw9IiNiOGIwYTgiLz4KICA8IS0tIFNoYWRvdyAtLT4KICA8cmVjdCB4PSI4MCIgeT0iMjM2IiB3aWR0aD0iNDQwIiBoZWlnaHQ9IjUiIGZpbGw9IiMwMDAwMDAxNSIvPgo8L3N2Zz4=" alt="204 Oak Ave" style="width:100%;height:100%;object-fit:cover;display:block;">
+              <div class="loverlay"></div>
+              <div class="lscore sc-med">AI Score 61/100</div>
+            </div>
+            <div class="lbody">
+              <div class="lprice">$875,000</div><div class="laddr">204 Oak Ave, Menlo Park, CA</div>
+              <div class="lmeta"><span>🛏 3 bd</span><span>🚿 2 ba</span><span>📐 1,820 sqft</span></div>
+              <div class="ltip"><span>⚡</span><div class="ltip-t"><strong>Action needed:</strong> Short description. Add kitchen details to boost views 35%.</div></div>
+              <button class="score-view-btn" onclick="event.stopPropagation();openScoreBreakdown(1)">✦ View AI Score Breakdown</button>
+            </div>
+          </div>
+          <div class="lcard" onclick="openDetail(2)">
+            <div class="limg">
+              <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MDAiIGhlaWdodD0iMzAwIiB2aWV3Qm94PSIwIDAgNjAwIDMwMCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InNreTMiIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI2Y1YTYyMyIgc3RvcC1vcGFjaXR5PSIwLjMiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIzMCUiIHN0b3AtY29sb3I9IiM4N0NFRUIiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjRTBGMEZGIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJ3YWxsMyIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjZjBlOGQ4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI2UwZDBiOCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0icm9vZjMiIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzZhNGEyYSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiM0YTMwMTgiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxyZWN0IHdpZHRoPSI2MDAiIGhlaWdodD0iMzAwIiBmaWxsPSJ1cmwoI3NreTMpIi8+CiAgPCEtLSBTdW5zZXQgY2xvdWRzIC0tPgogIDxlbGxpcHNlIGN4PSI0ODAiIGN5PSIzNSIgcng9IjcwIiByeT0iMjAiIGZpbGw9IiNmZmNjODgiIG9wYWNpdHk9IjAuNSIvPgogIDxlbGxpcHNlIGN4PSIxMDAiIGN5PSI0NSIgcng9IjU1IiByeT0iMTgiIGZpbGw9IiNmZmRkYWEiIG9wYWNpdHk9IjAuNDUiLz4KICA8IS0tIExhd24gZXN0YXRlIC0tPgogIDxyZWN0IHg9IjAiIHk9IjIzMCIgd2lkdGg9IjYwMCIgaGVpZ2h0PSI3MCIgZmlsbD0iIzRhODAzMCIvPgogIDxyZWN0IHg9IjAiIHk9IjI1MCIgd2lkdGg9IjYwMCIgaGVpZ2h0PSI1MCIgZmlsbD0iIzNhNmEyMiIvPgogIDwhLS0gTG9uZyBkcml2ZXdheSAtLT4KICA8cG9seWdvbiBwb2ludHM9IjI0MCwzMDAgMzYwLDMwMCAzNDAsMjM1IDI2MCwyMzUiIGZpbGw9IiNjMGI4YTgiLz4KICA8bGluZSB4MT0iMzAwIiB5MT0iMjM1IiB4Mj0iMzAwIiB5Mj0iMzAwIiBzdHJva2U9IiNiMGE4OTgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWRhc2hhcnJheT0iNiw1Ii8+CiAgPCEtLSBDaXJjdWxhciBkcml2ZXdheSBoaW50IC0tPgogIDxlbGxpcHNlIGN4PSIzMDAiIGN5PSIyNTUiIHJ4PSI1MCIgcnk9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IiNiMGE4OTgiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtZGFzaGFycmF5PSI0LDMiLz4KICA8IS0tIEJhY2tncm91bmQgdHJlZXMgbGFyZ2UgLS0+CiAgPHJlY3QgeD0iMTAiIHk9IjkwIiB3aWR0aD0iMjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjNWEzYTFhIi8+CiAgPGVsbGlwc2UgY3g9IjIwIiBjeT0iODUiIHJ4PSIzOCIgcnk9IjU1IiBmaWxsPSIjMWU0YTEwIi8+CiAgPGVsbGlwc2UgY3g9IjIwIiBjeT0iNjUiIHJ4PSIyOCIgcnk9IjM4IiBmaWxsPSIjMjY2NjE4Ii8+CiAgPHJlY3QgeD0iNTU1IiB5PSIxMDAiIHdpZHRoPSIxOCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiM1YTNhMWEiLz4KICA8ZWxsaXBzZSBjeD0iNTY0IiBjeT0iOTUiIHJ4PSIzNSIgcnk9IjUwIiBmaWxsPSIjMWU0YTEwIi8+CiAgPGVsbGlwc2UgY3g9IjU2NCIgY3k9Ijc4IiByeD0iMjUiIHJ5PSIzNCIgZmlsbD0iIzI2NjYxOCIvPgogIDwhLS0gU2lkZSB0cmVlcyAtLT4KICA8cmVjdCB4PSI1NSIgeT0iMTIwIiB3aWR0aD0iMTQiIGhlaWdodD0iODAiIGZpbGw9IiM1YTNhMWEiLz4KICA8ZWxsaXBzZSBjeD0iNjIiIGN5PSIxMTUiIHJ4PSIyNiIgcnk9IjM4IiBmaWxsPSIjMmQ1YTFiIi8+CiAgPHJlY3QgeD0iNTMwIiB5PSIxMjAiIHdpZHRoPSIxNCIgaGVpZ2h0PSI4MCIgZmlsbD0iIzVhM2ExYSIvPgogIDxlbGxpcHNlIGN4PSI1MzciIGN5PSIxMTUiIHJ4PSIyNiIgcnk9IjM4IiBmaWxsPSIjMmQ1YTFiIi8+CiAgPCEtLSBNYWluIG1hbnNpb24gYm9keSAtLT4KICA8cmVjdCB4PSI4MCIgeT0iMTUwIiB3aWR0aD0iNDQwIiBoZWlnaHQ9Ijg1IiBmaWxsPSJ1cmwoI3dhbGwzKSIvPgogIDwhLS0gQ2VudGVyIHBvcnRpY28gLS0+CiAgPHJlY3QgeD0iMjMwIiB5PSIxMjAiIHdpZHRoPSIxNDAiIGhlaWdodD0iMTE1IiBmaWxsPSIjZWNlMGNjIi8+CiAgPCEtLSBHcmFuZCByb29mIC0tPgogIDxwb2x5Z29uIHBvaW50cz0iNjAsMTUwIDMwMCw3NSA1NDAsMTUwIiBmaWxsPSJ1cmwoI3Jvb2YzKSIvPgogIDxwb2x5Z29uIHBvaW50cz0iNjAsMTUwIDMwMCw3NyA1NDAsMTUwIDUzMCwxNTAgMzAwLDg3IDcwLDE1MCIgZmlsbD0iIzVhM2ExYSIvPgogIDwhLS0gUG9ydGljbyByb29mIC0tPgogIDxwb2x5Z29uIHBvaW50cz0iMjE1LDEyMCAzMDAsODUgMzg1LDEyMCIgZmlsbD0iIzVhM2ExYSIvPgogIDwhLS0gQ2hpbW5leXMgeDIgLS0+CiAgPHJlY3QgeD0iMTcwIiB5PSI5MCIgd2lkdGg9IjI1IiBoZWlnaHQ9IjYwIiBmaWxsPSIjOGE3MDYwIi8+CiAgPHJlY3QgeD0iMTY2IiB5PSI4NiIgd2lkdGg9IjMzIiBoZWlnaHQ9IjgiIGZpbGw9IiM2YTUwNDAiLz4KICA8cmVjdCB4PSI0MDUiIHk9IjkwIiB3aWR0aD0iMjUiIGhlaWdodD0iNjAiIGZpbGw9IiM4YTcwNjAiLz4KICA8cmVjdCB4PSI0MDEiIHk9Ijg2IiB3aWR0aD0iMzMiIGhlaWdodD0iOCIgZmlsbD0iIzZhNTA0MCIvPgogIDwhLS0gR3JhbmQgY29sdW1ucyAtLT4KICA8cmVjdCB4PSIyNDMiIHk9IjEyNSIgd2lkdGg9IjE2IiBoZWlnaHQ9IjExMCIgZmlsbD0iI2U4ZGNjOCIgcng9IjMiLz4KICA8cmVjdCB4PSIyNzgiIHk9IjEyNSIgd2lkdGg9IjE2IiBoZWlnaHQ9IjExMCIgZmlsbD0iI2U4ZGNjOCIgcng9IjMiLz4KICA8cmVjdCB4PSIzMDYiIHk9IjEyNSIgd2lkdGg9IjE2IiBoZWlnaHQ9IjExMCIgZmlsbD0iI2U4ZGNjOCIgcng9IjMiLz4KICA8cmVjdCB4PSIzNDEiIHk9IjEyNSIgd2lkdGg9IjE2IiBoZWlnaHQ9IjExMCIgZmlsbD0iI2U4ZGNjOCIgcng9IjMiLz4KICA8IS0tIENvbHVtbiBjYXBzIC0tPgogIDxyZWN0IHg9IjIzOCIgeT0iMTIyIiB3aWR0aD0iMjYiIGhlaWdodD0iOCIgZmlsbD0iI2Q4Y2JiOCIgcng9IjEiLz4KICA8cmVjdCB4PSIyNzMiIHk9IjEyMiIgd2lkdGg9IjI2IiBoZWlnaHQ9IjgiIGZpbGw9IiNkOGNiYjgiIHJ4PSIxIi8+CiAgPHJlY3QgeD0iMzAxIiB5PSIxMjIiIHdpZHRoPSIyNiIgaGVpZ2h0PSI4IiBmaWxsPSIjZDhjYmI4IiByeD0iMSIvPgogIDxyZWN0IHg9IjMzNiIgeT0iMTIyIiB3aWR0aD0iMjYiIGhlaWdodD0iOCIgZmlsbD0iI2Q4Y2JiOCIgcng9IjEiLz4KICA8IS0tIEdyYW5kIGZyb250IGRvb3IgZG91YmxlIC0tPgogIDxyZWN0IHg9IjI2OCIgeT0iMTY1IiB3aWR0aD0iMzAiIGhlaWdodD0iNzAiIGZpbGw9IiM1YTMwMTAiIHJ4PSIyIi8+CiAgPHJlY3QgeD0iMzAyIiB5PSIxNjUiIHdpZHRoPSIzMCIgaGVpZ2h0PSI3MCIgZmlsbD0iIzVhMzAxMCIgcng9IjIiLz4KICA8cmVjdCB4PSIyNzAiIHk9IjE2NyIgd2lkdGg9IjEzIiBoZWlnaHQ9IjMwIiBmaWxsPSIjNGEyODA4IiBvcGFjaXR5PSIwLjciLz4KICA8cmVjdCB4PSIyODUiIHk9IjE2NyIgd2lkdGg9IjExIiBoZWlnaHQ9IjMwIiBmaWxsPSIjNGEyODA4IiBvcGFjaXR5PSIwLjciLz4KICA8cmVjdCB4PSIzMDQiIHk9IjE2NyIgd2lkdGg9IjEzIiBoZWlnaHQ9IjMwIiBmaWxsPSIjNGEyODA4IiBvcGFjaXR5PSIwLjciLz4KICA8cmVjdCB4PSIzMTkiIHk9IjE2NyIgd2lkdGg9IjExIiBoZWlnaHQ9IjMwIiBmaWxsPSIjNGEyODA4IiBvcGFjaXR5PSIwLjciLz4KICA8IS0tIERvb3IgYXJjaCAtLT4KICA8cGF0aCBkPSJNMjY4LDE2NSBRMjgzLDE0OCAyOTgsMTY1IiBmaWxsPSIjNGEyODA4Ii8+CiAgPHBhdGggZD0iTTMwMiwxNjUgUTMxNywxNDggMzMyLDE2NSIgZmlsbD0iIzRhMjgwOCIvPgogIDwhLS0gRG9vciBoYXJkd2FyZSAtLT4KICA8Y2lyY2xlIGN4PSIzMDAiIGN5PSIyMDIiIHI9IjMiIGZpbGw9IiNkNGEwMjAiLz4KICA8Y2lyY2xlIGN4PSIzMDIiIGN5PSIyMDIiIHI9IjMiIGZpbGw9IiNkNGEwMjAiLz4KICA8IS0tIEZsYW5raW5nIHdpbmRvd3MgbGFyZ2UgLS0+CiAgPHJlY3QgeD0iOTUiIHk9IjE2MyIgd2lkdGg9IjcwIiBoZWlnaHQ9IjU4IiBmaWxsPSIjYjhkOGY0IiByeD0iMiIvPgogIDxyZWN0IHg9Ijk3IiB5PSIxNjUiIHdpZHRoPSIzMiIgaGVpZ2h0PSI1NCIgZmlsbD0iI2E4Y2NlYyIvPgogIDxyZWN0IHg9IjEzMSIgeT0iMTY1IiB3aWR0aD0iMzIiIGhlaWdodD0iNTQiIGZpbGw9IiNhOGNjZWMiLz4KICA8cmVjdCB4PSI5NSIgeT0iMTYzIiB3aWR0aD0iNzAiIGhlaWdodD0iNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2IwOTg3OCIgc3Ryb2tlLXdpZHRoPSIyIiByeD0iMiIvPgogIDxyZWN0IHg9IjQzNSIgeT0iMTYzIiB3aWR0aD0iNzAiIGhlaWdodD0iNTgiIGZpbGw9IiNiOGQ4ZjQiIHJ4PSIyIi8+CiAgPHJlY3QgeD0iNDM3IiB5PSIxNjUiIHdpZHRoPSIzMiIgaGVpZ2h0PSI1NCIgZmlsbD0iI2E4Y2NlYyIvPgogIDxyZWN0IHg9IjQ3MSIgeT0iMTY1IiB3aWR0aD0iMzIiIGhlaWdodD0iNTQiIGZpbGw9IiNhOGNjZWMiLz4KICA8cmVjdCB4PSI0MzUiIHk9IjE2MyIgd2lkdGg9IjcwIiBoZWlnaHQ9IjU4IiBmaWxsPSJub25lIiBzdHJva2U9IiNiMDk4NzgiIHN0cm9rZS13aWR0aD0iMiIgcng9IjIiLz4KICA8IS0tIFNlY29uZCByb3cgd2luZG93cyAtLT4KICA8cmVjdCB4PSIxNTUiIHk9IjE2NSIgd2lkdGg9IjUwIiBoZWlnaHQ9IjQyIiBmaWxsPSIjYjhkOGY0IiByeD0iMiIvPgogIDxyZWN0IHg9IjE1NyIgeT0iMTY3IiB3aWR0aD0iMjIiIGhlaWdodD0iMzgiIGZpbGw9IiNhOGNjZWMiLz4KICA8cmVjdCB4PSIxODEiIHk9IjE2NyIgd2lkdGg9IjIyIiBoZWlnaHQ9IjM4IiBmaWxsPSIjYThjY2VjIi8+CiAgPHJlY3QgeD0iMzk1IiB5PSIxNjUiIHdpZHRoPSI1MCIgaGVpZ2h0PSI0MiIgZmlsbD0iI2I4ZDhmNCIgcng9IjIiLz4KICA8cmVjdCB4PSIzOTciIHk9IjE2NyIgd2lkdGg9IjIyIiBoZWlnaHQ9IjM4IiBmaWxsPSIjYThjY2VjIi8+CiAgPHJlY3QgeD0iNDIxIiB5PSIxNjciIHdpZHRoPSIyMiIgaGVpZ2h0PSIzOCIgZmlsbD0iI2E4Y2NlYyIvPgogIDwhLS0gRXN0YXRlIHN0YWlycyAtLT4KICA8cmVjdCB4PSIyNDUiIHk9IjIzMCIgd2lkdGg9IjExMCIgaGVpZ2h0PSI4IiBmaWxsPSIjZDhjOGE4IiByeD0iMSIvPgogIDxyZWN0IHg9IjI1MCIgeT0iMjM3IiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjgiIGZpbGw9IiNjOGI4OTgiIHJ4PSIxIi8+CiAgPCEtLSBGb3VudGFpbiBoaW50IC0tPgogIDxlbGxpcHNlIGN4PSIzMDAiIGN5PSIyNjUiIHJ4PSIyMiIgcnk9IjgiIGZpbGw9IiM3YWI4ZDgiIG9wYWNpdHk9IjAuNiIvPgogIDxlbGxpcHNlIGN4PSIzMDAiIGN5PSIyNjMiIHJ4PSIxNCIgcnk9IjUiIGZpbGw9IiM4YWM4ZTgiIG9wYWNpdHk9IjAuNyIvPgogIDwhLS0gRXN0YXRlIGxhbmRzY2FwaW5nIC0tPgogIDxlbGxpcHNlIGN4PSIxMzAiIGN5PSIyMzgiIHJ4PSIzMCIgcnk9IjE4IiBmaWxsPSIjM2E3YTIyIi8+CiAgPGVsbGlwc2UgY3g9IjQ3MCIgY3k9IjIzOCIgcng9IjMwIiByeT0iMTgiIGZpbGw9IiMzYTdhMjIiLz4KICA8ZWxsaXBzZSBjeD0iMTAwIiBjeT0iMjQyIiByeD0iMjIiIHJ5PSIxNCIgZmlsbD0iIzJkNjAxOCIvPgogIDxlbGxpcHNlIGN4PSI1MDAiIGN5PSIyNDIiIHJ4PSIyMiIgcnk9IjE0IiBmaWxsPSIjMmQ2MDE4Ii8+CiAgPCEtLSBGbG93ZXJzIGVzdGF0ZSAtLT4KICA8Y2lyY2xlIGN4PSIxMjUiIGN5PSIyMjgiIHI9IjUiIGZpbGw9IiNmZjZiOWQiLz4KICA8Y2lyY2xlIGN4PSIxMzgiIGN5PSIyMjUiIHI9IjQiIGZpbGw9IiNmZjk5MzMiLz4KICA8Y2lyY2xlIGN4PSIxMTUiIGN5PSIyMzAiIHI9IjQiIGZpbGw9IiNjYzQ0ZmYiLz4KICA8Y2lyY2xlIGN4PSI0NjIiIGN5PSIyMjgiIHI9IjUiIGZpbGw9IiNmZjZiOWQiLz4KICA8Y2lyY2xlIGN4PSI0NzUiIGN5PSIyMjUiIHI9IjQiIGZpbGw9IiNmZjk5MzMiLz4KICA8Y2lyY2xlIGN4PSI0ODUiIGN5PSIyMzAiIHI9IjQiIGZpbGw9IiNjYzQ0ZmYiLz4KICA8IS0tIFNoYWRvdyAtLT4KICA8cmVjdCB4PSI4MCIgeT0iMjMyIiB3aWR0aD0iNDQwIiBoZWlnaHQ9IjUiIGZpbGw9IiMwMDAwMDAxOCIvPgo8L3N2Zz4=" alt="17 Ridgeview Ln" style="width:100%;height:100%;object-fit:cover;display:block;">
+              <div class="loverlay"></div>
+              <div class="lscore sc-hi">AI Score 88/100</div>
+            </div>
+            <div class="lbody">
+              <div class="lprice">$2,100,000</div><div class="laddr">17 Ridgeview Ln, Los Altos, CA</div>
+              <div class="lmeta"><span>🛏 5 bd</span><span>🚿 4 ba</span><span>📐 3,800 sqft</span></div>
+              <div class="ltip"><span>✨</span><div class="ltip-t">Strong. 14 saves this week — expect offers soon.</div></div>
+              <button class="score-view-btn" onclick="event.stopPropagation();openScoreBreakdown(2)">✦ View AI Score Breakdown</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ MESSAGES ============ -->
+    <div id="pg-messages" class="page">
+      <div class="ph">
+        <div class="ph-title">Messages</div>
+        <div class="ph-sub">5 conversations · 3 unread</div>
+      </div>
+      <div class="scroll">
+        <div class="conv-list">
+          <div class="conv-item" onclick="openChat(0)">
+            <div class="conv-av" style="background:#fef2f2;color:#dc2626;">JR<div class="conv-unread-dot"></div></div>
+            <div class="conv-info">
+              <div class="conv-name">James Rodriguez</div>
+              <div class="conv-preview unread">Is there any flexibility on the asking price?</div>
+            </div>
+            <div class="conv-right"><div class="conv-time">2m ago</div><div class="conv-badge">2</div></div>
+          </div>
+          <div class="conv-item" onclick="openChat(1)">
+            <div class="conv-av" style="background:#fffbeb;color:#d97706;">AK<div class="conv-unread-dot"></div></div>
+            <div class="conv-info">
+              <div class="conv-name">Aisha Kamara</div>
+              <div class="conv-preview unread">Can we do Saturday at 11am?</div>
+            </div>
+            <div class="conv-right"><div class="conv-time">18m ago</div><div class="conv-badge">1</div></div>
+          </div>
+          <div class="conv-item" onclick="openChat(2)">
+            <div class="conv-av" style="background:#e8f5ee;color:#155c3d;">TN</div>
+            <div class="conv-info">
+              <div class="conv-name">Thomas Ng</div>
+              <div class="conv-preview">Thanks, I'll review the documents tonight.</div>
+            </div>
+            <div class="conv-right"><div class="conv-time">1h ago</div></div>
+          </div>
+          <div class="conv-item" onclick="openChat(3)">
+            <div class="conv-av" style="background:#eff6ff;color:#2563eb;">DL<div class="conv-unread-dot"></div></div>
+            <div class="conv-info">
+              <div class="conv-name">David Lin</div>
+              <div class="conv-preview unread">What's the HOA fee on Ridgeview?</div>
+            </div>
+            <div class="conv-right"><div class="conv-time">3h ago</div><div class="conv-badge">1</div></div>
+          </div>
+          <div class="conv-item" onclick="openChat(4)">
+            <div class="conv-av" style="background:#f5f3ff;color:#7c3aed;">MB</div>
+            <div class="conv-info">
+              <div class="conv-name">Maria Benson</div>
+              <div class="conv-preview">See you Friday! Looking forward to it 😊</div>
+            </div>
+            <div class="conv-right"><div class="conv-time">Yesterday</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ FOLLOW-UPS ============ -->
+    <div id="pg-followups" class="page">
+      <div class="ph">
+        <div class="ph-title">Follow-Ups</div>
+        <div class="ph-sub">AI-drafted · ready to send</div>
+      </div>
+      <div class="scroll">
+        <div class="fu-list">
+          <div class="fu-card">
+            <div class="fu-top"><div><div class="fu-nm">James Rodriguez</div><div class="fu-prop">842 Elm St, Palo Alto</div></div><div class="fu-tm">8 days ago</div></div>
+            <div class="fu-draft"><div class="fu-dlbl">✦ AI Draft</div><div class="fu-dtxt" id="ft0">Hi James, just checking in on 842 Elm — it's had a lot of interest this week. Would love to set up another walkthrough before the weekend!</div></div>
+            <div class="fu-acts">
+              <button class="fu-btn fu-send" id="fs0" onclick="sendFU(0,'James')">Send via SMS</button>
+              <button class="fu-btn fu-edit" onclick="openEdit(0,'James Rodriguez')">Edit</button>
+            </div>
+          </div>
+          <div class="fu-card">
+            <div class="fu-top"><div><div class="fu-nm">Aisha Kamara</div><div class="fu-prop">Multiple properties</div></div><div class="fu-tm">5 days ago</div></div>
+            <div class="fu-draft"><div class="fu-dlbl">✦ AI Draft</div><div class="fu-dtxt" id="ft1">Hi Aisha! A new listing just came up in your area, priced $50K under your budget. It ticks nearly every box on your wishlist. Want to look this week?</div></div>
+            <div class="fu-acts">
+              <button class="fu-btn fu-send" id="fs1" onclick="sendFU(1,'Aisha')">Send via Email</button>
+              <button class="fu-btn fu-edit" onclick="openEdit(1,'Aisha Kamara')">Edit</button>
+            </div>
+          </div>
+          <div class="fu-card">
+            <div class="fu-top"><div><div class="fu-nm">Thomas Ng</div><div class="fu-prop">New inquiry · $1.2M budget</div></div><div class="fu-tm">Just now</div></div>
+            <div class="fu-draft"><div class="fu-dlbl">✦ AI Draft</div><div class="fu-dtxt" id="ft2">Hi Thomas! I have 3 properties matching your criteria. Love to schedule a quick call to understand your timeline. When works for you?</div></div>
+            <div class="fu-acts">
+              <button class="fu-btn fu-send" id="fs2" onclick="sendFU(2,'Thomas')">Send via SMS</button>
+              <button class="fu-btn fu-edit" onclick="openEdit(2,'Thomas Ng')">Edit</button>
+            </div>
+          </div>
+          <div class="fu-card">
+            <div class="fu-top"><div><div class="fu-nm">David Lin</div><div class="fu-prop">17 Ridgeview Ln</div></div><div class="fu-tm">3 hours ago</div></div>
+            <div class="fu-draft"><div class="fu-dlbl">✦ AI Draft</div><div class="fu-dtxt" id="ft3">Hi David! The HOA at Ridgeview is $320/month covering landscaping, pool & security. Happy to send the full HOA docs — want me to forward them?</div></div>
+            <div class="fu-acts">
+              <button class="fu-btn fu-send" id="fs3" onclick="sendFU(3,'David')">Reply via SMS</button>
+              <button class="fu-btn fu-edit" onclick="openEdit(3,'David Lin')">Edit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ PROFILE ============ -->
+    <div id="pg-profile" class="page">
+      <div class="ph">
+        <div class="ph-title">Profile</div>
+      </div>
+      <div class="scroll">
+        <div class="profile-hero">
+          <div class="profile-av">SM</div>
+          <div class="profile-info">
+            <div class="profile-name">Sarah Mitchell</div>
+            <div class="profile-role">Senior Real Estate Broker · Palo Alto</div>
+            <button class="profile-edit-btn" onclick="toast('✏️ Profile editing coming soon')">Edit Profile</button>
+          </div>
+        </div>
+        <div class="perf-row">
+          <div class="perf-c"><div class="perf-v">$4.2M</div><div class="perf-l">Volume YTD</div></div>
+          <div class="perf-c"><div class="perf-v">8</div><div class="perf-l">Closed Deals</div></div>
+          <div class="perf-c"><div class="perf-v">4.9★</div><div class="perf-l">Client Rating</div></div>
+        </div>
+        <div class="sec-label" style="margin-top:4px;">AI Settings</div>
+        <div class="settings-list">
+          <div class="setting-group">
+            <div class="setting-row"><div class="setting-icon">🤖</div><div class="setting-label">AI Follow-up Drafts</div><div class="toggle" onclick="toggleSwitch(this)"></div></div>
+            <div class="setting-row"><div class="setting-icon">💬</div><div class="setting-label">AI Message Suggestions</div><div class="toggle" onclick="toggleSwitch(this)"></div></div>
+            <div class="setting-row"><div class="setting-icon">📊</div><div class="setting-label">Listing Optimization</div><div class="toggle" onclick="toggleSwitch(this)"></div></div>
+            <div class="setting-row"><div class="setting-icon">🔔</div><div class="setting-label">Lead Alerts</div><div class="toggle" onclick="toggleSwitch(this)"></div></div>
+          </div>
+          <div class="setting-group">
+            <div class="setting-row" onclick="toast('📱 Notification preferences')"><div class="setting-icon">🔔</div><div class="setting-label">Notifications</div><div class="setting-val">All</div><div class="setting-arr">›</div></div>
+            <div class="setting-row" onclick="toast('🔗 CRM connected: Salesforce')"><div class="setting-icon">🔗</div><div class="setting-label">CRM Integration</div><div class="setting-val">Salesforce</div><div class="setting-arr">›</div></div>
+            <div class="setting-row" onclick="toast('📋 MLS Sync: Active')"><div class="setting-icon">🏠</div><div class="setting-label">MLS Sync</div><div class="setting-val">Active</div><div class="setting-arr">›</div></div>
+          </div>
+          <div class="setting-group">
+            <div class="setting-row" onclick="toast('📞 Support: support@propai.com')"><div class="setting-icon">📞</div><div class="setting-label">Help & Support</div><div class="setting-arr">›</div></div>
+            <div class="setting-row" onclick="toast('👋 Signed out')"><div class="setting-icon">🚪</div><div class="setting-label" style="color:#dc2626;">Sign Out</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NAV BAR -->
+    <div class="nav">
+      <div class="ni active" id="ni-dashboard" onclick="goTo('dashboard')">
+        <div class="ni-icon">⌂</div><div class="ni-pip"></div><div class="ni-lbl">Home</div>
+      </div>
+      <div class="ni" id="ni-listings" onclick="goTo('listings')">
+        <div class="ni-icon">🏠</div><div class="ni-pip"></div><div class="ni-lbl">Listings</div>
+      </div>
+      <div class="ni" id="ni-messages" onclick="goTo('messages')">
+        <div class="ni-icon">💬</div>
+        <div class="ni-badge" id="msg-badge">3</div>
+        <div class="ni-pip"></div><div class="ni-lbl">Messages</div>
+      </div>
+      <div class="ni" id="ni-followups" onclick="goTo('followups')">
+        <div class="ni-icon">📨</div>
+        <div class="ni-badge" id="fu-badge">4</div>
+        <div class="ni-pip"></div><div class="ni-lbl">Follow-Ups</div>
+      </div>
+      <div class="ni" id="ni-profile" onclick="goTo('profile')">
+        <div class="ni-icon">👤</div><div class="ni-pip"></div><div class="ni-lbl">Profile</div>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+    <!-- ============ CHAT VIEW OVERLAY ============ -->
+    <div class="chat-view" id="chat-view">
+      <div class="chat-header">
+        <div class="chat-back" onclick="closeChat()">←</div>
+        <div class="chat-av-sm" id="chat-av">JR</div>
+        <div>
+          <div class="chat-name" id="chat-name">James Rodriguez</div>
+          <div class="chat-status" id="chat-status">● Online</div>
+        </div>
+        <button class="chat-ai-btn" onclick="showAISuggestion()">✦ AI Suggest</button>
+      </div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input-area">
+        <div class="chat-input-row">
+          <button class="chat-ai-suggest-btn" title="AI Suggest" onclick="showAISuggestion()">✦</button>
+          <input class="chat-input" id="chat-input" placeholder="iMessage" onkeydown="if(event.key==='Enter')sendChatMsg()">
+          <button class="chat-send" onclick="sendChatMsg()">↑</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ LISTING DETAIL OVERLAY ============ -->
+    <div class="lov" id="lov">
+      <div class="lov-img" id="lov-img">
+        <div class="lov-emoji" id="lov-emoji">🏡</div>
+        <div class="lov-overlay"></div>
+        <div class="lov-back" onclick="closeDetail()">←</div>
+      </div>
+      <div class="lov-body">
+        <div class="lov-price" id="lov-price"></div>
+        <div class="lov-addr" id="lov-addr"></div>
+        <div class="lov-score-pill"><div class="lov-sn" id="lov-score"></div><div class="lov-sl">/ 100 AI Score</div></div>
+        <div class="lov-grid" id="lov-stats"></div>
+        <div class="sec-t">AI Recommendation</div>
+        <div class="lov-tip"><span>✨</span><div class="lov-tip-t" id="lov-tip"></div></div>
+        <div class="sec-t">Activity This Week</div>
+        <div class="lov-grid" id="lov-act"></div>
+        <button class="lov-opt-btn" onclick="toast('🤖 AI optimization started!');closeDetail()">✦ Optimize with AI</button>
+      </div>
+    </div>
+
+    <!-- EDIT MODAL -->
+    <div class="emod" id="emod" onclick="if(event.target===this)closeEditModal()">
+      <div class="esheet">
+        <div class="ehandle"></div>
+        <div class="etitle" id="etitle">Edit Draft</div>
+        <div class="esub" id="esub">Personalize before sending</div>
+        <textarea class="etarea" id="etarea"></textarea>
+        <div class="eacts">
+          <button class="ecancel" onclick="closeEditModal()">Cancel</button>
+          <button class="esave" onclick="saveEdit()">Save & Close</button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ===== AI SCORE BREAKDOWN OVERLAY ===== -->
+    <div class="score-overlay" id="score-overlay">
+      <div class="score-ov-header">
+        <div class="score-ov-back" onclick="closeScoreBreakdown()">←</div>
+        <div>
+          <div class="score-ov-title" id="sov-title">AI Score Breakdown</div>
+          <div class="score-ov-sub" id="sov-addr">842 Elm Street, Palo Alto</div>
+        </div>
+      </div>
+      <div class="score-ov-body">
+        <!-- Score ring -->
+        <div class="score-hero">
+          <div class="score-ring-wrap">
+            <svg width="120" height="120" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="52" fill="none" stroke="#f0f0ec" stroke-width="10"/>
+              <circle cx="60" cy="60" r="52" fill="none" stroke="#1e7a52" stroke-width="10"
+                stroke-dasharray="326.7" stroke-dashoffset="326.7"
+                id="score-ring-circle" stroke-linecap="round"/>
+            </svg>
+            <div class="score-ring-num">
+              <div class="score-ring-val" id="sov-score">94</div>
+              <div class="score-ring-lbl">/ 100</div>
+            </div>
+          </div>
+          <div class="score-grade" id="sov-grade">Excellent</div>
+          <div class="score-updated">Last calculated · Just now</div>
+        </div>
+
+        <!-- Category breakdown -->
+        <div class="score-section-title">Score Breakdown</div>
+        <div class="score-categories" id="sov-categories"></div>
+
+        <!-- Improvement tips -->
+        <div class="score-improve" id="sov-improve">
+          <div class="score-improve-title"><span>✦</span> How to improve this score</div>
+          <div id="sov-tips"></div>
+        </div>
+
+        <button class="score-recalc-btn" onclick="toast('🔄 Score recalculated!');animateScoreRing()">
+          🔄 Recalculate Score Now
+        </button>
+      </div>
+    </div>
+
+  </div><!-- .screen -->
+</div><!-- .iphone -->
+</div><!-- .iphone-wrap -->
+
+<script>
+// Auto-scale phone to fit screen
+function scalePhone(){
+  const availH = window.innerHeight - 2;
+  const availW = window.innerWidth - 2;
+  const phoneW = 393, phoneH = 852;
+  const scale = Math.min(availH / phoneH, availW / phoneW);
+  document.querySelector('.iphone').style.transform = `scale(${scale})`;
+  document.querySelector('.iphone-wrap').style.height = (phoneH * scale) + 'px';
+  document.querySelector('.iphone-wrap').style.width = (phoneW * scale) + 'px';
+}
+scalePhone();
+window.addEventListener('resize', scalePhone);
+// ===== DATA =====
+const contacts = [
+  {name:'James Rodriguez',initials:'JR',color:'#fef2f2',textColor:'#dc2626',status:'● Online',property:'842 Elm St',
+   messages:[
+    {from:'them',text:"Hi Sarah! I visited 842 Elm Street yesterday and really loved it. The backyard is amazing.",time:'Mon 2:14 PM'},
+    {from:'me',text:"So glad you loved it James! The sellers put a lot of work into that garden. Did you have any questions?",time:'Mon 2:45 PM'},
+    {from:'them',text:"Yes actually — is there any flexibility on the asking price? We're pre-approved at $1.18M.",time:'Today 9:38 AM'},
+    {from:'them',text:"Also, how old is the roof?",time:'Today 9:39 AM'},
+   ],
+   aiSuggestion:"Hi James! There's some room for negotiation — the sellers have indicated they'd consider offers around $1.19M with a quick close. The roof was replaced in 2021 and comes with a 10-year warranty. Would you like to put together an offer?"},
+
+  {name:'Aisha Kamara',initials:'AK',color:'#fffbeb',textColor:'#d97706',status:'● Online',property:'Multiple',
+   messages:[
+    {from:'them',text:"I've been thinking more about the Menlo Park property. The layout is perfect for my family.",time:'Yesterday 4:20 PM'},
+    {from:'me',text:"That's wonderful! It really is a great family home. Want to do a second viewing?",time:'Yesterday 5:01 PM'},
+    {from:'them',text:"Yes please! Can we do Saturday at 11am?",time:'Today 9:22 AM'},
+   ],
+   aiSuggestion:"Hi Aisha! Saturday at 11am works perfectly. I'll confirm with the sellers and send you the address pin. Also, I wanted to mention a new listing that just came up at $825K — it might actually suit your needs even better. Should I include that in Saturday's tour?"},
+
+  {name:'Thomas Ng',initials:'TN',color:'#e8f5ee',textColor:'#155c3d',status:'● Away',property:'New inquiry',
+   messages:[
+    {from:'me',text:"Hi Thomas! I have 3 great properties matching your $1.2M budget. Happy to share the details!",time:'Today 8:00 AM'},
+    {from:'them',text:"Great, please send them over.",time:'Today 8:22 AM'},
+    {from:'me',text:"Sent! I've emailed you a PDF with full details, photos and floor plans for all 3.",time:'Today 8:30 AM'},
+    {from:'them',text:"Thanks, I'll review the documents tonight.",time:'Today 8:45 AM'},
+   ],
+   aiSuggestion:"Hi Thomas! Just checking if you had a chance to review the properties I sent. I'm available for a quick call tomorrow if you'd like to discuss any of them further. Palo Alto listing is getting a lot of interest this week."},
+
+  {name:'David Lin',initials:'DL',color:'#eff6ff',textColor:'#2563eb',status:'● Online',property:'17 Ridgeview Ln',
+   messages:[
+    {from:'them',text:"I'm very interested in 17 Ridgeview Lane. Cash purchase, can close in 2 weeks.",time:'Today 6:10 AM'},
+    {from:'me',text:"David, that's fantastic news! The sellers will love that timeline. Let me reach out to them right away.",time:'Today 7:45 AM'},
+    {from:'them',text:"What's the HOA fee on Ridgeview?",time:'Today 7:55 AM'},
+   ],
+   aiSuggestion:"Hi David! The HOA at Ridgeview is $320/month which covers landscaping, pool maintenance, and 24/7 security. I can send the full HOA financials and meeting minutes if you'd like to review before making an offer. Given your 2-week close timeline, shall we move fast on this?"},
+
+  {name:'Maria Benson',initials:'MB',color:'#f5f3ff',textColor:'#7c3aed',status:'● Away',property:'17 Ridgeview Ln',
+   messages:[
+    {from:'me',text:"Hi Maria! Just confirming your viewing this Friday at 2pm for 17 Ridgeview Lane.",time:'Yesterday 10:00 AM'},
+    {from:'them',text:"Confirmed! I'm bringing my husband too if that's okay?",time:'Yesterday 11:30 AM'},
+    {from:'me',text:"Of course! The more the merrier. See you both Friday 😊",time:'Yesterday 12:00 PM'},
+    {from:'them',text:"See you Friday! Looking forward to it 😊",time:'Yesterday 3:14 PM'},
+   ],
+   aiSuggestion:"Hi Maria! Looking forward to seeing you and your husband on Friday. I'll prepare a detailed comparison of similar properties in the area so you can see how well-priced Ridgeview is. Is there anything specific you'd like me to highlight during the tour?"}
+];
+
+const listingsData = [
+  {emoji:'🏡',price:'$1,249,000',addr:'842 Elm Street, Palo Alto, CA',score:94,beds:4,baths:3,sqft:'2,340',tip:'This listing is your top performer. Consider adding twilight photography — homes with twilight shots sell 21% faster in this zip code. Price is perfectly positioned.',photo:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MDAiIGhlaWdodD0iMzAwIiB2aWV3Qm94PSIwIDAgNjAwIDMwMCI+CiAgPCEtLSBTa3kgZ3JhZGllbnQgLS0+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InNreTEiIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzg3Q0VFQiIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNFMEY0RkYiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9Imxhd24xIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiM1YThhM2MiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjM2Q2YjI1Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJ3YWxsMSIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjZThkNWIwIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI2Q0Yjg5NiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0icm9vZjEiIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzVjM2QxZSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMzZDI2MTAiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDwhLS0gU2t5IC0tPgogIDxyZWN0IHdpZHRoPSI2MDAiIGhlaWdodD0iMzAwIiBmaWxsPSJ1cmwoI3NreTEpIi8+CiAgPCEtLSBDbG91ZHMgLS0+CiAgPGVsbGlwc2UgY3g9IjEyMCIgY3k9IjUwIiByeD0iNTAiIHJ5PSIyMCIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuODUiLz4KICA8ZWxsaXBzZSBjeD0iMTUwIiBjeT0iNDUiIHJ4PSI0MCIgcnk9IjIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC44NSIvPgogIDxlbGxpcHNlIGN4PSI5MCIgY3k9IjU1IiByeD0iMzUiIHJ5PSIxNiIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuODUiLz4KICA8ZWxsaXBzZSBjeD0iNDUwIiBjeT0iNjAiIHJ4PSI2MCIgcnk9IjIyIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC44Ii8+CiAgPGVsbGlwc2UgY3g9IjQ5MCIgY3k9IjU1IiByeD0iNDUiIHJ5PSIyMCIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuOCIvPgogIDwhLS0gVHJlZXMgYmFja2dyb3VuZCAtLT4KICA8cmVjdCB4PSIyMCIgeT0iMTAwIiB3aWR0aD0iMTgiIGhlaWdodD0iODAiIGZpbGw9IiM1YTNhMWEiLz4KICA8ZWxsaXBzZSBjeD0iMjkiIGN5PSI5NSIgcng9IjMwIiByeT0iNDUiIGZpbGw9IiMyZDVhMWIiLz4KICA8ZWxsaXBzZSBjeD0iMjkiIGN5PSI4MCIgcng9IjIyIiByeT0iMzIiIGZpbGw9IiMzYTdhMjIiLz4KICA8cmVjdCB4PSI1MjAiIHk9IjExMCIgd2lkdGg9IjE2IiBoZWlnaHQ9IjcwIiBmaWxsPSIjNWEzYTFhIi8+CiAgPGVsbGlwc2UgY3g9IjUyOCIgY3k9IjEwNSIgcng9IjI4IiByeT0iNDAiIGZpbGw9IiMyZDVhMWIiLz4KICA8ZWxsaXBzZSBjeD0iNTI4IiBjeT0iOTIiIHJ4PSIyMCIgcnk9IjI4IiBmaWxsPSIjM2E3YTIyIi8+CiAgPCEtLSBMYXduIC0tPgogIDxyZWN0IHg9IjAiIHk9IjIyMCIgd2lkdGg9IjYwMCIgaGVpZ2h0PSI4MCIgZmlsbD0idXJsKCNsYXduMSkiLz4KICA8cmVjdCB4PSIwIiB5PSIyNDAiIHdpZHRoPSI2MDAiIGhlaWdodD0iNjAiIGZpbGw9IiM0YTdhMzAiLz4KICA8IS0tIERyaXZld2F5IC0tPgogIDxwb2x5Z29uIHBvaW50cz0iMjUwLDMwMCAzNTAsMzAwIDMyMCwyMzAgMjgwLDIzMCIgZmlsbD0iI2IwYTA5MCIvPgogIDwhLS0gTWFpbiBob3VzZSBib2R5IC0tPgogIDxyZWN0IHg9IjEwMCIgeT0iMTQwIiB3aWR0aD0iNDAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0idXJsKCN3YWxsMSkiLz4KICA8IS0tIFJvb2YgLS0+CiAgPHBvbHlnb24gcG9pbnRzPSI4MCwxNDAgMzAwLDcwIDUyMCwxNDAiIGZpbGw9InVybCgjcm9vZjEpIi8+CiAgPHBvbHlnb24gcG9pbnRzPSI4MCwxNDAgMzAwLDcyIDUyMCwxNDAgNTEwLDE0MCAzMDAsODIgOTAsMTQwIiBmaWxsPSIjNGEyZTEyIi8+CiAgPCEtLSBSb29mIHRyaW0gLS0+CiAgPGxpbmUgeDE9IjgwIiB5MT0iMTQwIiB4Mj0iMzAwIiB5Mj0iNzAiIHN0cm9rZT0iIzNkMjYxMCIgc3Ryb2tlLXdpZHRoPSIzIi8+CiAgPGxpbmUgeDE9IjMwMCIgeTE9IjcwIiB4Mj0iNTIwIiB5Mj0iMTQwIiBzdHJva2U9IiMzZDI2MTAiIHN0cm9rZS13aWR0aD0iMyIvPgogIDwhLS0gQ2hpbW5leSAtLT4KICA8cmVjdCB4PSIzODAiIHk9IjgwIiB3aWR0aD0iMzAiIGhlaWdodD0iNjAiIGZpbGw9IiM4YTYwNDAiLz4KICA8cmVjdCB4PSIzNzYiIHk9Ijc2IiB3aWR0aD0iMzgiIGhlaWdodD0iOCIgZmlsbD0iIzZhNDgzMCIvPgogIDwhLS0gR2FyYWdlIC0tPgogIDxyZWN0IHg9IjM0MCIgeT0iMTcwIiB3aWR0aD0iMTIwIiBoZWlnaHQ9IjcwIiBmaWxsPSIjZDRiODk2Ii8+CiAgPHJlY3QgeD0iMzQwIiB5PSIxNzAiIHdpZHRoPSIxMjAiIGhlaWdodD0iNzAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2IwOTA3MCIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPCEtLSBHYXJhZ2UgZG9vciBwYW5lbHMgLS0+CiAgPGxpbmUgeDE9IjM0MCIgeTE9IjE5MyIgeDI9IjQ2MCIgeTI9IjE5MyIgc3Ryb2tlPSIjYjA5MDcwIiBzdHJva2Utd2lkdGg9IjEuNSIvPgogIDxsaW5lIHgxPSIzNDAiIHkxPSIyMTYiIHgyPSI0NjAiIHkyPSIyMTYiIHN0cm9rZT0iI2IwOTA3MCIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICA8bGluZSB4MT0iNDAwIiB5MT0iMTcwIiB4Mj0iNDAwIiB5Mj0iMjQwIiBzdHJva2U9IiNiMDkwNzAiIHN0cm9rZS13aWR0aD0iMS41Ii8+CiAgPCEtLSBGcm9udCBkb29yIC0tPgogIDxyZWN0IHg9IjIzMCIgeT0iMTc1IiB3aWR0aD0iNTAiIGhlaWdodD0iNjUiIGZpbGw9IiM3YTQ1MjAiIHJ4PSIzIi8+CiAgPHJlY3QgeD0iMjM1IiB5PSIxODAiIHdpZHRoPSIxOCIgaGVpZ2h0PSIyNSIgZmlsbD0iIzVhMzAxMCIgb3BhY2l0eT0iMC42IiByeD0iMSIvPgogIDxyZWN0IHg9IjI1NyIgeT0iMTgwIiB3aWR0aD0iMTgiIGhlaWdodD0iMjUiIGZpbGw9IiM1YTMwMTAiIG9wYWNpdHk9IjAuNiIgcng9IjEiLz4KICA8Y2lyY2xlIGN4PSIyNzEiIGN5PSIyMTAiIHI9IjMiIGZpbGw9IiNkNGEwMjAiLz4KICA8IS0tIFdpbmRvd3MgbWFpbiBmbG9vciAtLT4KICA8cmVjdCB4PSIxMTUiIHk9IjE2MCIgd2lkdGg9IjU1IiBoZWlnaHQ9IjQ1IiBmaWxsPSIjYzhlNGY4IiByeD0iMiIvPgogIDxyZWN0IHg9IjExNyIgeT0iMTYyIiB3aWR0aD0iMjQiIGhlaWdodD0iNDEiIGZpbGw9IiNiMGQ4ZjUiIHJ4PSIxIi8+CiAgPHJlY3QgeD0iMTQzIiB5PSIxNjIiIHdpZHRoPSIyNSIgaGVpZ2h0PSI0MSIgZmlsbD0iI2IwZDhmNSIgcng9IjEiLz4KICA8cmVjdCB4PSIxMTUiIHk9IjE2MCIgd2lkdGg9IjU1IiBoZWlnaHQ9IjQ1IiBmaWxsPSJub25lIiBzdHJva2U9IiM4YTYwNDAiIHN0cm9rZS13aWR0aD0iMiIgcng9IjIiLz4KICA8cmVjdCB4PSI0NzAiIHk9IjE2MCIgd2lkdGg9IjU1IiBoZWlnaHQ9IjQ1IiBmaWxsPSIjYzhlNGY4IiByeD0iMiIvPgogIDxyZWN0IHg9IjQ3MiIgeT0iMTYyIiB3aWR0aD0iMjQiIGhlaWdodD0iNDEiIGZpbGw9IiNiMGQ4ZjUiIHJ4PSIxIi8+CiAgPHJlY3QgeD0iNDk4IiB5PSIxNjIiIHdpZHRoPSIyNSIgaGVpZ2h0PSI0MSIgZmlsbD0iI2IwZDhmNSIgcng9IjEiLz4KICA8cmVjdCB4PSI0NzAiIHk9IjE2MCIgd2lkdGg9IjU1IiBoZWlnaHQ9IjQ1IiBmaWxsPSJub25lIiBzdHJva2U9IiM4YTYwNDAiIHN0cm9rZS13aWR0aD0iMiIgcng9IjIiLz4KICA8IS0tIFBvcmNoIC0tPgogIDxyZWN0IHg9IjE5MCIgeT0iMjI1IiB3aWR0aD0iMTMwIiBoZWlnaHQ9IjE1IiBmaWxsPSIjYzhhODcwIi8+CiAgPHJlY3QgeD0iMTk1IiB5PSIyMTUiIHdpZHRoPSI4IiBoZWlnaHQ9IjIwIiBmaWxsPSIjYjA5MDYwIi8+CiAgPHJlY3QgeD0iMzEyIiB5PSIyMTUiIHdpZHRoPSI4IiBoZWlnaHQ9IjIwIiBmaWxsPSIjYjA5MDYwIi8+CiAgPCEtLSBTdGVwcyAtLT4KICA8cmVjdCB4PSIyMTUiIHk9IjIzNSIgd2lkdGg9IjgwIiBoZWlnaHQ9IjgiIGZpbGw9IiNiMDk4NzAiIHJ4PSIxIi8+CiAgPHJlY3QgeD0iMjIwIiB5PSIyNDIiIHdpZHRoPSI3MCIgaGVpZ2h0PSI4IiBmaWxsPSIjYTA4ODYwIiByeD0iMSIvPgogIDwhLS0gTGFuZHNjYXBpbmcgLS0+CiAgPGVsbGlwc2UgY3g9IjE2MCIgY3k9IjIzMCIgcng9IjI1IiByeT0iMTUiIGZpbGw9IiMzYTdhMjIiLz4KICA8ZWxsaXBzZSBjeD0iNDQwIiBjeT0iMjMwIiByeD0iMjUiIHJ5PSIxNSIgZmlsbD0iIzNhN2EyMiIvPgogIDxlbGxpcHNlIGN4PSIxMzAiIGN5PSIyMzUiIHJ4PSIxOCIgcnk9IjEyIiBmaWxsPSIjMmQ2MDE4Ii8+CiAgPGVsbGlwc2UgY3g9IjQ3MCIgY3k9IjIzNSIgcng9IjE4IiByeT0iMTIiIGZpbGw9IiMyZDYwMTgiLz4KICA8IS0tIEZsb3dlcnMgLS0+CiAgPGNpcmNsZSBjeD0iMTU1IiBjeT0iMjIyIiByPSI0IiBmaWxsPSIjZmY2YjlkIi8+CiAgPGNpcmNsZSBjeD0iMTY1IiBjeT0iMjIwIiByPSIzIiBmaWxsPSIjZmZiMzQ3Ii8+CiAgPGNpcmNsZSBjeD0iNDQ1IiBjeT0iMjIyIiByPSI0IiBmaWxsPSIjZmY2YjlkIi8+CiAgPGNpcmNsZSBjeD0iNDM1IiBjeT0iMjIwIiByPSIzIiBmaWxsPSIjZmZiMzQ3Ii8+CiAgPCEtLSBTaGFkb3cgdW5kZXIgaG91c2UgLS0+CiAgPHJlY3QgeD0iMTAwIiB5PSIyMzgiIHdpZHRoPSI0MDAiIGhlaWdodD0iNCIgZmlsbD0iIzAwMDAwMDIwIi8+Cjwvc3ZnPg==',views:'248',saves:'14',inquiries:'6'},
+  {emoji:'🏢',price:'$875,000',addr:'204 Oak Ave, Menlo Park, CA',score:61,beds:3,baths:2,sqft:'1,820',tip:'Description is below average length. Add kitchen renovation details and backyard dimensions. This alone could boost views by 35%.',photo:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MDAiIGhlaWdodD0iMzAwIiB2aWV3Qm94PSIwIDAgNjAwIDMwMCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InNreTIiIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI2M5ZThmNSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNlYWY2ZmYiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9IndhbGwyIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNmNWY1ZjIiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjZThlOGU0Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KICA8cmVjdCB3aWR0aD0iNjAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0idXJsKCNza3kyKSIvPgogIDwhLS0gQ2xvdWRzIHN1YnRsZSAtLT4KICA8ZWxsaXBzZSBjeD0iNTAwIiBjeT0iNDAiIHJ4PSI3MCIgcnk9IjE4IiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC43Ii8+CiAgPGVsbGlwc2UgY3g9IjgwIiBjeT0iNTUiIHJ4PSI1NSIgcnk9IjE1IiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC42Ii8+CiAgPCEtLSBHcm91bmQgLS0+CiAgPHJlY3QgeD0iMCIgeT0iMjM1IiB3aWR0aD0iNjAwIiBoZWlnaHQ9IjY1IiBmaWxsPSIjNWE4YTNjIi8+CiAgPHJlY3QgeD0iMCIgeT0iMjQ4IiB3aWR0aD0iNjAwIiBoZWlnaHQ9IjUyIiBmaWxsPSIjNGE3ODI4Ii8+CiAgPCEtLSBEcml2ZXdheSBtb2Rlcm4gLS0+CiAgPHBvbHlnb24gcG9pbnRzPSIyMjAsMzAwIDM4MCwzMDAgMzYwLDI0MCAyNDAsMjQwIiBmaWxsPSIjYzhjMGI4Ii8+CiAgPGxpbmUgeDE9IjMwMCIgeTE9IjI0MCIgeDI9IjMwMCIgeTI9IjMwMCIgc3Ryb2tlPSIjYjhiMGE4IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1kYXNoYXJyYXk9IjgsNiIvPgogIDwhLS0gTWFpbiBzdHJ1Y3R1cmUgLSBtb2Rlcm4gZmxhdCByb29mIC0tPgogIDxyZWN0IHg9IjgwIiB5PSIxMzAiIHdpZHRoPSI0NDAiIGhlaWdodD0iMTEwIiBmaWxsPSJ1cmwoI3dhbGwyKSIvPgogIDwhLS0gRmxhdCByb29mIHdpdGggb3ZlcmhhbmcgLS0+CiAgPHJlY3QgeD0iNjAiIHk9IjEyMiIgd2lkdGg9IjQ4MCIgaGVpZ2h0PSIxNSIgZmlsbD0iIzRhNGE0YSIvPgogIDxyZWN0IHg9IjYwIiB5PSIxMjAiIHdpZHRoPSI0ODAiIGhlaWdodD0iOCIgZmlsbD0iIzNhM2EzYSIvPgogIDwhLS0gU2Vjb25kIHN0b3J5IGJveCAtLT4KICA8cmVjdCB4PSIxNjAiIHk9IjcyIiB3aWR0aD0iMjAwIiBoZWlnaHQ9IjU4IiBmaWxsPSIjZjBmMGVjIi8+CiAgPHJlY3QgeD0iMTU1IiB5PSI2NSIgd2lkdGg9IjIxMCIgaGVpZ2h0PSIxMiIgZmlsbD0iIzRhNGE0YSIvPgogIDwhLS0gTGFyZ2UgZmxvb3IgdG8gY2VpbGluZyB3aW5kb3dzIC0tPgogIDxyZWN0IHg9IjkwIiB5PSIxMzgiIHdpZHRoPSIxMTAiIGhlaWdodD0iOTUiIGZpbGw9IiNiOGQ4ZjAiIHJ4PSIxIi8+CiAgPHJlY3QgeD0iOTIiIHk9IjE0MCIgd2lkdGg9IjUzIiBoZWlnaHQ9IjkxIiBmaWxsPSIjYThjY2VjIi8+CiAgPHJlY3QgeD0iMTQ3IiB5PSIxNDAiIHdpZHRoPSI1MSIgaGVpZ2h0PSI5MSIgZmlsbD0iI2E4Y2NlYyIvPgogIDxyZWN0IHg9IjkwIiB5PSIxMzgiIHdpZHRoPSIxMTAiIGhlaWdodD0iOTUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2M4YzhjNCIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPCEtLSBXaW5kb3cgcmVmbGVjdGlvbiBsaW5lcyAtLT4KICA8bGluZSB4MT0iMTA1IiB5MT0iMTQwIiB4Mj0iMTA1IiB5Mj0iMjMzIiBzdHJva2U9IiNjY2UwZjUiIHN0cm9rZS13aWR0aD0iMSIgb3BhY2l0eT0iMC42Ii8+CiAgPGxpbmUgeDE9IjEyMCIgeTE9IjE0MCIgeDI9IjEyMCIgeTI9IjIzMyIgc3Ryb2tlPSIjY2NlMGY1IiBzdHJva2Utd2lkdGg9IjEiIG9wYWNpdHk9IjAuNCIvPgogIDwhLS0gRnJvbnQgZG9vciBtb2Rlcm4gLS0+CiAgPHJlY3QgeD0iMjc1IiB5PSIxNjAiIHdpZHRoPSI1MCIgaGVpZ2h0PSI3NSIgZmlsbD0iIzJhMmEyYSIgcng9IjIiLz4KICA8cmVjdCB4PSIyNzgiIHk9IjE2MyIgd2lkdGg9IjQ0IiBoZWlnaHQ9IjMwIiBmaWxsPSIjMWExYTFhIiBvcGFjaXR5PSIwLjgiLz4KICA8Y2lyY2xlIGN4PSIzMjAiIGN5PSIyMDAiIHI9IjMuNSIgZmlsbD0iI2Q0YTAyMCIvPgogIDwhLS0gU2lkZWxpZ2h0IHdpbmRvd3MgZG9vciAtLT4KICA8cmVjdCB4PSIyNjIiIHk9IjE2MyIgd2lkdGg9IjEyIiBoZWlnaHQ9IjY1IiBmaWxsPSIjYjhkOGYwIiBvcGFjaXR5PSIwLjgiLz4KICA8cmVjdCB4PSIzMjYiIHk9IjE2MyIgd2lkdGg9IjEyIiBoZWlnaHQ9IjY1IiBmaWxsPSIjYjhkOGYwIiBvcGFjaXR5PSIwLjgiLz4KICA8IS0tIFJpZ2h0IHdpbmRvd3MgLS0+CiAgPHJlY3QgeD0iNDAwIiB5PSIxNDUiIHdpZHRoPSI5MCIgaGVpZ2h0PSI3NSIgZmlsbD0iI2I4ZDhmMCIgcng9IjEiLz4KICA8cmVjdCB4PSI0MDIiIHk9IjE0NyIgd2lkdGg9IjQzIiBoZWlnaHQ9IjcxIiBmaWxsPSIjYThjY2VjIi8+CiAgPHJlY3QgeD0iNDQ3IiB5PSIxNDciIHdpZHRoPSI0MSIgaGVpZ2h0PSI3MSIgZmlsbD0iI2E4Y2NlYyIvPgogIDxyZWN0IHg9IjQwMCIgeT0iMTQ1IiB3aWR0aD0iOTAiIGhlaWdodD0iNzUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2M4YzhjNCIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPCEtLSBTZWNvbmQgc3Rvcnkgd2luZG93cyAtLT4KICA8cmVjdCB4PSIxNzAiIHk9Ijc4IiB3aWR0aD0iODAiIGhlaWdodD0iNDIiIGZpbGw9IiNiOGQ4ZjAiIHJ4PSIxIi8+CiAgPHJlY3QgeD0iMTcyIiB5PSI4MCIgd2lkdGg9IjM3IiBoZWlnaHQ9IjM4IiBmaWxsPSIjYThjY2VjIi8+CiAgPHJlY3QgeD0iMjExIiB5PSI4MCIgd2lkdGg9IjM3IiBoZWlnaHQ9IjM4IiBmaWxsPSIjYThjY2VjIi8+CiAgPHJlY3QgeD0iMjY1IiB5PSI3OCIgd2lkdGg9IjgwIiBoZWlnaHQ9IjQyIiBmaWxsPSIjYjhkOGYwIiByeD0iMSIvPgogIDxyZWN0IHg9IjI2NyIgeT0iODAiIHdpZHRoPSIzNyIgaGVpZ2h0PSIzOCIgZmlsbD0iI2E4Y2NlYyIvPgogIDxyZWN0IHg9IjMwNiIgeT0iODAiIHdpZHRoPSIzNyIgaGVpZ2h0PSIzOCIgZmlsbD0iI2E4Y2NlYyIvPgogIDwhLS0gR2FyYWdlIG1vZGVybiAtLT4KICA8cmVjdCB4PSI0MzAiIHk9IjE1NSIgd2lkdGg9IjgwIiBoZWlnaHQ9IjY1IiBmaWxsPSIjZThlOGU0Ii8+CiAgPHJlY3QgeD0iNDMwIiB5PSIxNTUiIHdpZHRoPSI4MCIgaGVpZ2h0PSI2NSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYzhjOGM0IiBzdHJva2Utd2lkdGg9IjIiLz4KICA8bGluZSB4MT0iNDMwIiB5MT0iMTc1IiB4Mj0iNTEwIiB5Mj0iMTc1IiBzdHJva2U9IiNjOGM4YzQiIHN0cm9rZS13aWR0aD0iMS41Ii8+CiAgPGxpbmUgeDE9IjQzMCIgeTE9IjE5NSIgeDI9IjUxMCIgeTI9IjE5NSIgc3Ryb2tlPSIjYzhjOGM0IiBzdHJva2Utd2lkdGg9IjEuNSIvPgogIDxsaW5lIHgxPSI0MzAiIHkxPSIyMTUiIHgyPSI1MTAiIHkyPSIyMTUiIHN0cm9rZT0iI2M4YzhjNCIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICA8IS0tIE1vZGVybiBsYW5kc2NhcGluZyAtLT4KICA8cmVjdCB4PSI4MCIgeT0iMjMwIiB3aWR0aD0iNDQwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjM2E2ODIwIi8+CiAgPCEtLSBPcm5hbWVudGFsIGdyYXNzZXMgLS0+CiAgPGVsbGlwc2UgY3g9IjEwMCIgY3k9IjIzNSIgcng9IjE1IiByeT0iMTAiIGZpbGw9IiM2YTlhNDAiLz4KICA8ZWxsaXBzZSBjeD0iNTAwIiBjeT0iMjM1IiByeD0iMTUiIHJ5PSIxMCIgZmlsbD0iIzZhOWE0MCIvPgogIDwhLS0gTW9kZXJuIGhlZGdlIGJveGVzIC0tPgogIDxyZWN0IHg9IjEzMCIgeT0iMjIyIiB3aWR0aD0iMzUiIGhlaWdodD0iMTgiIGZpbGw9IiM0YTdhMzAiIHJ4PSIyIi8+CiAgPHJlY3QgeD0iNDM1IiB5PSIyMjIiIHdpZHRoPSIzNSIgaGVpZ2h0PSIxOCIgZmlsbD0iIzRhN2EzMCIgcng9IjIiLz4KICA8IS0tIFN0ZXBwaW5nIHN0b25lcyAtLT4KICA8ZWxsaXBzZSBjeD0iMjY1IiBjeT0iMjQ0IiByeD0iMTQiIHJ5PSI2IiBmaWxsPSIjYjhiMGE4Ii8+CiAgPGVsbGlwc2UgY3g9IjMwMCIgY3k9IjI0OCIgcng9IjE0IiByeT0iNiIgZmlsbD0iI2I4YjBhOCIvPgogIDxlbGxpcHNlIGN4PSIzMzUiIGN5PSIyNDQiIHJ4PSIxNCIgcnk9IjYiIGZpbGw9IiNiOGIwYTgiLz4KICA8IS0tIFNoYWRvdyAtLT4KICA8cmVjdCB4PSI4MCIgeT0iMjM2IiB3aWR0aD0iNDQwIiBoZWlnaHQ9IjUiIGZpbGw9IiMwMDAwMDAxNSIvPgo8L3N2Zz4=',views:'97',saves:'3',inquiries:'1'},
+  {emoji:'🏠',price:'$2,100,000',addr:'17 Ridgeview Ln, Los Altos, CA',score:88,beds:5,baths:4,sqft:'3,800',tip:'Strong performance. 14 saves this week signals high buyer intent. Price accurate for the market. Expect offers within 2 weeks.',photo:'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MDAiIGhlaWdodD0iMzAwIiB2aWV3Qm94PSIwIDAgNjAwIDMwMCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InNreTMiIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI2Y1YTYyMyIgc3RvcC1vcGFjaXR5PSIwLjMiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIzMCUiIHN0b3AtY29sb3I9IiM4N0NFRUIiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjRTBGMEZGIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJ3YWxsMyIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjZjBlOGQ4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI2UwZDBiOCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0icm9vZjMiIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzZhNGEyYSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiM0YTMwMTgiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxyZWN0IHdpZHRoPSI2MDAiIGhlaWdodD0iMzAwIiBmaWxsPSJ1cmwoI3NreTMpIi8+CiAgPCEtLSBTdW5zZXQgY2xvdWRzIC0tPgogIDxlbGxpcHNlIGN4PSI0ODAiIGN5PSIzNSIgcng9IjcwIiByeT0iMjAiIGZpbGw9IiNmZmNjODgiIG9wYWNpdHk9IjAuNSIvPgogIDxlbGxpcHNlIGN4PSIxMDAiIGN5PSI0NSIgcng9IjU1IiByeT0iMTgiIGZpbGw9IiNmZmRkYWEiIG9wYWNpdHk9IjAuNDUiLz4KICA8IS0tIExhd24gZXN0YXRlIC0tPgogIDxyZWN0IHg9IjAiIHk9IjIzMCIgd2lkdGg9IjYwMCIgaGVpZ2h0PSI3MCIgZmlsbD0iIzRhODAzMCIvPgogIDxyZWN0IHg9IjAiIHk9IjI1MCIgd2lkdGg9IjYwMCIgaGVpZ2h0PSI1MCIgZmlsbD0iIzNhNmEyMiIvPgogIDwhLS0gTG9uZyBkcml2ZXdheSAtLT4KICA8cG9seWdvbiBwb2ludHM9IjI0MCwzMDAgMzYwLDMwMCAzNDAsMjM1IDI2MCwyMzUiIGZpbGw9IiNjMGI4YTgiLz4KICA8bGluZSB4MT0iMzAwIiB5MT0iMjM1IiB4Mj0iMzAwIiB5Mj0iMzAwIiBzdHJva2U9IiNiMGE4OTgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWRhc2hhcnJheT0iNiw1Ii8+CiAgPCEtLSBDaXJjdWxhciBkcml2ZXdheSBoaW50IC0tPgogIDxlbGxpcHNlIGN4PSIzMDAiIGN5PSIyNTUiIHJ4PSI1MCIgcnk9IjEwIiBmaWxsPSJub25lIiBzdHJva2U9IiNiMGE4OTgiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtZGFzaGFycmF5PSI0LDMiLz4KICA8IS0tIEJhY2tncm91bmQgdHJlZXMgbGFyZ2UgLS0+CiAgPHJlY3QgeD0iMTAiIHk9IjkwIiB3aWR0aD0iMjAiIGhlaWdodD0iMTEwIiBmaWxsPSIjNWEzYTFhIi8+CiAgPGVsbGlwc2UgY3g9IjIwIiBjeT0iODUiIHJ4PSIzOCIgcnk9IjU1IiBmaWxsPSIjMWU0YTEwIi8+CiAgPGVsbGlwc2UgY3g9IjIwIiBjeT0iNjUiIHJ4PSIyOCIgcnk9IjM4IiBmaWxsPSIjMjY2NjE4Ii8+CiAgPHJlY3QgeD0iNTU1IiB5PSIxMDAiIHdpZHRoPSIxOCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiM1YTNhMWEiLz4KICA8ZWxsaXBzZSBjeD0iNTY0IiBjeT0iOTUiIHJ4PSIzNSIgcnk9IjUwIiBmaWxsPSIjMWU0YTEwIi8+CiAgPGVsbGlwc2UgY3g9IjU2NCIgY3k9Ijc4IiByeD0iMjUiIHJ5PSIzNCIgZmlsbD0iIzI2NjYxOCIvPgogIDwhLS0gU2lkZSB0cmVlcyAtLT4KICA8cmVjdCB4PSI1NSIgeT0iMTIwIiB3aWR0aD0iMTQiIGhlaWdodD0iODAiIGZpbGw9IiM1YTNhMWEiLz4KICA8ZWxsaXBzZSBjeD0iNjIiIGN5PSIxMTUiIHJ4PSIyNiIgcnk9IjM4IiBmaWxsPSIjMmQ1YTFiIi8+CiAgPHJlY3QgeD0iNTMwIiB5PSIxMjAiIHdpZHRoPSIxNCIgaGVpZ2h0PSI4MCIgZmlsbD0iIzVhM2ExYSIvPgogIDxlbGxpcHNlIGN4PSI1MzciIGN5PSIxMTUiIHJ4PSIyNiIgcnk9IjM4IiBmaWxsPSIjMmQ1YTFiIi8+CiAgPCEtLSBNYWluIG1hbnNpb24gYm9keSAtLT4KICA8cmVjdCB4PSI4MCIgeT0iMTUwIiB3aWR0aD0iNDQwIiBoZWlnaHQ9Ijg1IiBmaWxsPSJ1cmwoI3dhbGwzKSIvPgogIDwhLS0gQ2VudGVyIHBvcnRpY28gLS0+CiAgPHJlY3QgeD0iMjMwIiB5PSIxMjAiIHdpZHRoPSIxNDAiIGhlaWdodD0iMTE1IiBmaWxsPSIjZWNlMGNjIi8+CiAgPCEtLSBHcmFuZCByb29mIC0tPgogIDxwb2x5Z29uIHBvaW50cz0iNjAsMTUwIDMwMCw3NSA1NDAsMTUwIiBmaWxsPSJ1cmwoI3Jvb2YzKSIvPgogIDxwb2x5Z29uIHBvaW50cz0iNjAsMTUwIDMwMCw3NyA1NDAsMTUwIDUzMCwxNTAgMzAwLDg3IDcwLDE1MCIgZmlsbD0iIzVhM2ExYSIvPgogIDwhLS0gUG9ydGljbyByb29mIC0tPgogIDxwb2x5Z29uIHBvaW50cz0iMjE1LDEyMCAzMDAsODUgMzg1LDEyMCIgZmlsbD0iIzVhM2ExYSIvPgogIDwhLS0gQ2hpbW5leXMgeDIgLS0+CiAgPHJlY3QgeD0iMTcwIiB5PSI5MCIgd2lkdGg9IjI1IiBoZWlnaHQ9IjYwIiBmaWxsPSIjOGE3MDYwIi8+CiAgPHJlY3QgeD0iMTY2IiB5PSI4NiIgd2lkdGg9IjMzIiBoZWlnaHQ9IjgiIGZpbGw9IiM2YTUwNDAiLz4KICA8cmVjdCB4PSI0MDUiIHk9IjkwIiB3aWR0aD0iMjUiIGhlaWdodD0iNjAiIGZpbGw9IiM4YTcwNjAiLz4KICA8cmVjdCB4PSI0MDEiIHk9Ijg2IiB3aWR0aD0iMzMiIGhlaWdodD0iOCIgZmlsbD0iIzZhNTA0MCIvPgogIDwhLS0gR3JhbmQgY29sdW1ucyAtLT4KICA8cmVjdCB4PSIyNDMiIHk9IjEyNSIgd2lkdGg9IjE2IiBoZWlnaHQ9IjExMCIgZmlsbD0iI2U4ZGNjOCIgcng9IjMiLz4KICA8cmVjdCB4PSIyNzgiIHk9IjEyNSIgd2lkdGg9IjE2IiBoZWlnaHQ9IjExMCIgZmlsbD0iI2U4ZGNjOCIgcng9IjMiLz4KICA8cmVjdCB4PSIzMDYiIHk9IjEyNSIgd2lkdGg9IjE2IiBoZWlnaHQ9IjExMCIgZmlsbD0iI2U4ZGNjOCIgcng9IjMiLz4KICA8cmVjdCB4PSIzNDEiIHk9IjEyNSIgd2lkdGg9IjE2IiBoZWlnaHQ9IjExMCIgZmlsbD0iI2U4ZGNjOCIgcng9IjMiLz4KICA8IS0tIENvbHVtbiBjYXBzIC0tPgogIDxyZWN0IHg9IjIzOCIgeT0iMTIyIiB3aWR0aD0iMjYiIGhlaWdodD0iOCIgZmlsbD0iI2Q4Y2JiOCIgcng9IjEiLz4KICA8cmVjdCB4PSIyNzMiIHk9IjEyMiIgd2lkdGg9IjI2IiBoZWlnaHQ9IjgiIGZpbGw9IiNkOGNiYjgiIHJ4PSIxIi8+CiAgPHJlY3QgeD0iMzAxIiB5PSIxMjIiIHdpZHRoPSIyNiIgaGVpZ2h0PSI4IiBmaWxsPSIjZDhjYmI4IiByeD0iMSIvPgogIDxyZWN0IHg9IjMzNiIgeT0iMTIyIiB3aWR0aD0iMjYiIGhlaWdodD0iOCIgZmlsbD0iI2Q4Y2JiOCIgcng9IjEiLz4KICA8IS0tIEdyYW5kIGZyb250IGRvb3IgZG91YmxlIC0tPgogIDxyZWN0IHg9IjI2OCIgeT0iMTY1IiB3aWR0aD0iMzAiIGhlaWdodD0iNzAiIGZpbGw9IiM1YTMwMTAiIHJ4PSIyIi8+CiAgPHJlY3QgeD0iMzAyIiB5PSIxNjUiIHdpZHRoPSIzMCIgaGVpZ2h0PSI3MCIgZmlsbD0iIzVhMzAxMCIgcng9IjIiLz4KICA8cmVjdCB4PSIyNzAiIHk9IjE2NyIgd2lkdGg9IjEzIiBoZWlnaHQ9IjMwIiBmaWxsPSIjNGEyODA4IiBvcGFjaXR5PSIwLjciLz4KICA8cmVjdCB4PSIyODUiIHk9IjE2NyIgd2lkdGg9IjExIiBoZWlnaHQ9IjMwIiBmaWxsPSIjNGEyODA4IiBvcGFjaXR5PSIwLjciLz4KICA8cmVjdCB4PSIzMDQiIHk9IjE2NyIgd2lkdGg9IjEzIiBoZWlnaHQ9IjMwIiBmaWxsPSIjNGEyODA4IiBvcGFjaXR5PSIwLjciLz4KICA8cmVjdCB4PSIzMTkiIHk9IjE2NyIgd2lkdGg9IjExIiBoZWlnaHQ9IjMwIiBmaWxsPSIjNGEyODA4IiBvcGFjaXR5PSIwLjciLz4KICA8IS0tIERvb3IgYXJjaCAtLT4KICA8cGF0aCBkPSJNMjY4LDE2NSBRMjgzLDE0OCAyOTgsMTY1IiBmaWxsPSIjNGEyODA4Ii8+CiAgPHBhdGggZD0iTTMwMiwxNjUgUTMxNywxNDggMzMyLDE2NSIgZmlsbD0iIzRhMjgwOCIvPgogIDwhLS0gRG9vciBoYXJkd2FyZSAtLT4KICA8Y2lyY2xlIGN4PSIzMDAiIGN5PSIyMDIiIHI9IjMiIGZpbGw9IiNkNGEwMjAiLz4KICA8Y2lyY2xlIGN4PSIzMDIiIGN5PSIyMDIiIHI9IjMiIGZpbGw9IiNkNGEwMjAiLz4KICA8IS0tIEZsYW5raW5nIHdpbmRvd3MgbGFyZ2UgLS0+CiAgPHJlY3QgeD0iOTUiIHk9IjE2MyIgd2lkdGg9IjcwIiBoZWlnaHQ9IjU4IiBmaWxsPSIjYjhkOGY0IiByeD0iMiIvPgogIDxyZWN0IHg9Ijk3IiB5PSIxNjUiIHdpZHRoPSIzMiIgaGVpZ2h0PSI1NCIgZmlsbD0iI2E4Y2NlYyIvPgogIDxyZWN0IHg9IjEzMSIgeT0iMTY1IiB3aWR0aD0iMzIiIGhlaWdodD0iNTQiIGZpbGw9IiNhOGNjZWMiLz4KICA8cmVjdCB4PSI5NSIgeT0iMTYzIiB3aWR0aD0iNzAiIGhlaWdodD0iNTgiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2IwOTg3OCIgc3Ryb2tlLXdpZHRoPSIyIiByeD0iMiIvPgogIDxyZWN0IHg9IjQzNSIgeT0iMTYzIiB3aWR0aD0iNzAiIGhlaWdodD0iNTgiIGZpbGw9IiNiOGQ4ZjQiIHJ4PSIyIi8+CiAgPHJlY3QgeD0iNDM3IiB5PSIxNjUiIHdpZHRoPSIzMiIgaGVpZ2h0PSI1NCIgZmlsbD0iI2E4Y2NlYyIvPgogIDxyZWN0IHg9IjQ3MSIgeT0iMTY1IiB3aWR0aD0iMzIiIGhlaWdodD0iNTQiIGZpbGw9IiNhOGNjZWMiLz4KICA8cmVjdCB4PSI0MzUiIHk9IjE2MyIgd2lkdGg9IjcwIiBoZWlnaHQ9IjU4IiBmaWxsPSJub25lIiBzdHJva2U9IiNiMDk4NzgiIHN0cm9rZS13aWR0aD0iMiIgcng9IjIiLz4KICA8IS0tIFNlY29uZCByb3cgd2luZG93cyAtLT4KICA8cmVjdCB4PSIxNTUiIHk9IjE2NSIgd2lkdGg9IjUwIiBoZWlnaHQ9IjQyIiBmaWxsPSIjYjhkOGY0IiByeD0iMiIvPgogIDxyZWN0IHg9IjE1NyIgeT0iMTY3IiB3aWR0aD0iMjIiIGhlaWdodD0iMzgiIGZpbGw9IiNhOGNjZWMiLz4KICA8cmVjdCB4PSIxODEiIHk9IjE2NyIgd2lkdGg9IjIyIiBoZWlnaHQ9IjM4IiBmaWxsPSIjYThjY2VjIi8+CiAgPHJlY3QgeD0iMzk1IiB5PSIxNjUiIHdpZHRoPSI1MCIgaGVpZ2h0PSI0MiIgZmlsbD0iI2I4ZDhmNCIgcng9IjIiLz4KICA8cmVjdCB4PSIzOTciIHk9IjE2NyIgd2lkdGg9IjIyIiBoZWlnaHQ9IjM4IiBmaWxsPSIjYThjY2VjIi8+CiAgPHJlY3QgeD0iNDIxIiB5PSIxNjciIHdpZHRoPSIyMiIgaGVpZ2h0PSIzOCIgZmlsbD0iI2E4Y2NlYyIvPgogIDwhLS0gRXN0YXRlIHN0YWlycyAtLT4KICA8cmVjdCB4PSIyNDUiIHk9IjIzMCIgd2lkdGg9IjExMCIgaGVpZ2h0PSI4IiBmaWxsPSIjZDhjOGE4IiByeD0iMSIvPgogIDxyZWN0IHg9IjI1MCIgeT0iMjM3IiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjgiIGZpbGw9IiNjOGI4OTgiIHJ4PSIxIi8+CiAgPCEtLSBGb3VudGFpbiBoaW50IC0tPgogIDxlbGxpcHNlIGN4PSIzMDAiIGN5PSIyNjUiIHJ4PSIyMiIgcnk9IjgiIGZpbGw9IiM3YWI4ZDgiIG9wYWNpdHk9IjAuNiIvPgogIDxlbGxpcHNlIGN4PSIzMDAiIGN5PSIyNjMiIHJ4PSIxNCIgcnk9IjUiIGZpbGw9IiM4YWM4ZTgiIG9wYWNpdHk9IjAuNyIvPgogIDwhLS0gRXN0YXRlIGxhbmRzY2FwaW5nIC0tPgogIDxlbGxpcHNlIGN4PSIxMzAiIGN5PSIyMzgiIHJ4PSIzMCIgcnk9IjE4IiBmaWxsPSIjM2E3YTIyIi8+CiAgPGVsbGlwc2UgY3g9IjQ3MCIgY3k9IjIzOCIgcng9IjMwIiByeT0iMTgiIGZpbGw9IiMzYTdhMjIiLz4KICA8ZWxsaXBzZSBjeD0iMTAwIiBjeT0iMjQyIiByeD0iMjIiIHJ5PSIxNCIgZmlsbD0iIzJkNjAxOCIvPgogIDxlbGxpcHNlIGN4PSI1MDAiIGN5PSIyNDIiIHJ4PSIyMiIgcnk9IjE0IiBmaWxsPSIjMmQ2MDE4Ii8+CiAgPCEtLSBGbG93ZXJzIGVzdGF0ZSAtLT4KICA8Y2lyY2xlIGN4PSIxMjUiIGN5PSIyMjgiIHI9IjUiIGZpbGw9IiNmZjZiOWQiLz4KICA8Y2lyY2xlIGN4PSIxMzgiIGN5PSIyMjUiIHI9IjQiIGZpbGw9IiNmZjk5MzMiLz4KICA8Y2lyY2xlIGN4PSIxMTUiIGN5PSIyMzAiIHI9IjQiIGZpbGw9IiNjYzQ0ZmYiLz4KICA8Y2lyY2xlIGN4PSI0NjIiIGN5PSIyMjgiIHI9IjUiIGZpbGw9IiNmZjZiOWQiLz4KICA8Y2lyY2xlIGN4PSI0NzUiIGN5PSIyMjUiIHI9IjQiIGZpbGw9IiNmZjk5MzMiLz4KICA8Y2lyY2xlIGN4PSI0ODUiIGN5PSIyMzAiIHI9IjQiIGZpbGw9IiNjYzQ0ZmYiLz4KICA8IS0tIFNoYWRvdyAtLT4KICA8cmVjdCB4PSI4MCIgeT0iMjMyIiB3aWR0aD0iNDQwIiBoZWlnaHQ9IjUiIGZpbGw9IiMwMDAwMDAxOCIvPgo8L3N2Zz4=',views:'312',saves:'19',inquiries:'9'}
+];
+
+let currentChat = null;
+let editingFU = null;
+let fuPending = 4;
+let msgUnread = 3;
+
+// ===== NAVIGATION =====
+function goTo(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  document.getElementById('pg-'+page).classList.add('active');
+  document.getElementById('ni-'+page).classList.add('active');
+  if(page==='messages'){
+    msgUnread=0;
+    const b=document.getElementById('msg-badge');
+    b.style.display='none';
+  }
+}
+
+// ===== TOAST =====
+let tTimer;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(tTimer);tTimer=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+// ===== CHAT =====
+function openChat(idx){
+  currentChat=idx;
+  const c=contacts[idx];
+  document.getElementById('chat-av').textContent=c.initials;
+  document.getElementById('chat-av').style.background=c.color;
+  document.getElementById('chat-av').style.color=c.textColor;
+  document.getElementById('chat-name').textContent=c.name;
+  document.getElementById('chat-status').textContent=c.status;
+  renderMessages();
+  document.getElementById('chat-view').classList.add('open');
+  // clear unread
+  const dot=document.querySelectorAll('.conv-item')[idx].querySelector('.conv-unread-dot');
+  const badge=document.querySelectorAll('.conv-item')[idx].querySelector('.conv-badge');
+  if(dot)dot.remove();
+  if(badge)badge.remove();
+  document.querySelectorAll('.conv-preview')[idx].classList.remove('unread');
+}
+
+function closeChat(){
+  document.getElementById('chat-view').classList.remove('open');
+  currentChat=null;
+  // remove any ai suggestion
+  const sug=document.getElementById('ai-sug');
+  if(sug)sug.remove();
+}
+
+function renderMessages(){
+  const container=document.getElementById('chat-messages');
+  container.innerHTML='';
+  if(currentChat===null)return;
+  const msgs=contacts[currentChat].messages;
+  msgs.forEach(m=>{
+    const wrap=document.createElement('div');
+    wrap.className='msg-wrap '+(m.from==='me'?'me':'them');
+    if(m.from==='them'){
+      const s=document.createElement('div');
+      s.className='msg-sender';
+      s.textContent=contacts[currentChat].name.split(' ')[0];
+      wrap.appendChild(s);
+    }
+    const bubble=document.createElement('div');
+    bubble.className='msg-bubble';
+    bubble.textContent=m.text;
+    const time=document.createElement('div');
+    time.className='msg-time';
+    time.textContent=m.time;
+    wrap.appendChild(bubble);
+    wrap.appendChild(time);
+    container.appendChild(wrap);
+  });
+  scrollToBottom();
+}
+
+function sendChatMsg(){
+  const input=document.getElementById('chat-input');
+  const text=input.value.trim();
+  if(!text||currentChat===null)return;
+  // remove suggestion if showing
+  const sug=document.getElementById('ai-sug');
+  if(sug)sug.remove();
+  contacts[currentChat].messages.push({from:'me',text,time:'Just now'});
+  input.value='';
+  renderMessages();
+  // simulate reply after 2s
+  setTimeout(()=>{
+    const replies=[
+      "Thanks for getting back to me so quickly!",
+      "That makes sense. Let me discuss with my partner.",
+      "Great, I'll get back to you shortly.",
+      "Perfect, I'll look out for that email.",
+      "Sounds good! See you soon."
+    ];
+    const r=replies[Math.floor(Math.random()*replies.length)];
+    contacts[currentChat].messages.push({from:'them',text:r,time:'Just now'});
+    renderMessages();
+  },1800);
+}
+
+function showAISuggestion(){
+  if(currentChat===null)return;
+  // remove existing
+  const existing=document.getElementById('ai-sug');
+  if(existing){existing.remove();return;}
+  const sug=document.createElement('div');
+  sug.className='ai-suggestion';
+  sug.id='ai-sug';
+  sug.innerHTML=`<div class="ai-sug-lbl">✦ AI Suggestion</div>
+    <div class="ai-sug-text">${contacts[currentChat].aiSuggestion}</div>
+    <button class="ai-sug-use" onclick="useAISuggestion()">Use this reply</button>`;
+  document.getElementById('chat-messages').appendChild(sug);
+  scrollToBottom();
+}
+
+function useAISuggestion(){
+  if(currentChat===null)return;
+  document.getElementById('chat-input').value=contacts[currentChat].aiSuggestion;
+  const sug=document.getElementById('ai-sug');
+  if(sug)sug.remove();
+  document.getElementById('chat-input').focus();
+}
+
+function scrollToBottom(){
+  const c=document.getElementById('chat-messages');
+  c.scrollTop=c.scrollHeight;
+}
+
+
+// ===== AI SCORE ENGINE =====
+const scoreData = [
+  {
+    addr: '842 Elm Street, Palo Alto',
+    score: 94,
+    grade: 'Excellent',
+    gradeClass: 'score-grade-a',
+    ringColor: '#1e7a52',
+    categories: [
+      {icon:'📸', name:'Listing Quality', weight:'25 pts', score:23, max:25, pct:92, cls:'good',
+       detail:'<strong>11 photos</strong> uploaded including exterior, kitchen & backyard. Professional photography detected. Missing: twilight/dusk shots.'},
+      {icon:'💰', name:'Price Intelligence', weight:'25 pts', score:24, max:25, pct:96, cls:'good',
+       detail:'Priced at <strong>$534/sqft</strong> vs. zip avg of $548/sqft. Well-positioned — competitive without underselling.'},
+      {icon:'📈', name:'Market Performance', weight:'25 pts', score:22, max:25, pct:88, cls:'good',
+       detail:'<strong>248 views</strong> this week (+34% vs avg). 14 saves (top 10% in area). 6 inquiries converted from views.'},
+      {icon:'📝', name:'Description Quality', weight:'15 pts', score:13, max:15, pct:87, cls:'good',
+       detail:'<strong>312 words</strong> — above average. Mentions kitchen, garden, schools nearby. Missing: HOA details, recent upgrades.'},
+      {icon:'⏱️', name:'Response & Activity', weight:'10 pts', score:8, max:10, pct:80, cls:'mid',
+       detail:'Avg response time: <strong>2.4 hours</strong>. No open house scheduled yet. Last updated 3 days ago.'},
+    ],
+    tips: [
+      {n:'1', text:'<strong>Add twilight photography</strong> — homes with dusk shots sell 21% faster in Palo Alto zip codes.'},
+      {n:'2', text:'<strong>Schedule an open house</strong> — could add up to +5 points to your Activity score.'},
+      {n:'3', text:'<strong>Mention the 2021 roof replacement</strong> in your description to increase buyer confidence.'},
+    ]
+  },
+  {
+    addr: '204 Oak Ave, Menlo Park',
+    score: 61,
+    grade: 'Needs Work',
+    gradeClass: 'score-grade-c',
+    ringColor: '#d97706',
+    categories: [
+      {icon:'📸', name:'Listing Quality', weight:'25 pts', score:14, max:25, pct:56, cls:'mid',
+       detail:'Only <strong>5 photos</strong> uploaded. No backyard or kitchen shots. No professional photography detected. Buyers skip listings with fewer than 8 photos.'},
+      {icon:'💰', name:'Price Intelligence', weight:'25 pts', score:19, max:25, pct:76, cls:'mid',
+       detail:'Priced at <strong>$481/sqft</strong> vs. zip avg of $510/sqft. Slightly underpriced — may signal issues to buyers. Consider adjusting.'},
+      {icon:'📈', name:'Market Performance', weight:'25 pts', score:11, max:25, pct:44, cls:'bad',
+       detail:'<strong>97 views</strong> this week (below avg of 180). Only 3 saves. 1 inquiry. Low engagement suggests listing needs refresh.'},
+      {icon:'📝', name:'Description Quality', weight:'15 pts', score:7, max:15, pct:47, cls:'bad',
+       detail:'Only <strong>89 words</strong> — well below average of 250+. No mention of kitchen, backyard, parking, or nearby amenities.'},
+      {icon:'⏱️', name:'Response & Activity', weight:'10 pts', score:10, max:10, pct:100, cls:'good',
+       detail:'Avg response time: <strong>0.8 hours</strong> — excellent! Quick replies keep leads warm. Keep it up.'},
+    ],
+    tips: [
+      {n:'1', text:'<strong>Expand your description to 250+ words</strong> — mention kitchen renovation, backyard sqft, garage, and nearby schools. Could add +8 pts.'},
+      {n:'2', text:'<strong>Upload at least 8 more photos</strong> — add kitchen, living room, backyard, and street view shots.'},
+      {n:'3', text:'<strong>Book a professional photographer</strong> — listings with pro photos get 61% more views on average.'},
+      {n:'4', text:'<strong>Review pricing</strong> — consider raising to $510/sqft to align with market and signal value.'},
+    ]
+  },
+  {
+    addr: '17 Ridgeview Ln, Los Altos',
+    score: 88,
+    grade: 'Very Good',
+    gradeClass: 'score-grade-a',
+    ringColor: '#1e7a52',
+    categories: [
+      {icon:'📸', name:'Listing Quality', weight:'25 pts', score:22, max:25, pct:88, cls:'good',
+       detail:'<strong>14 photos</strong> with professional photography. Aerial drone shot included. Missing: evening/twilight photos and video walkthrough.'},
+      {icon:'💰', name:'Price Intelligence', weight:'25 pts', score:23, max:25, pct:92, cls:'good',
+       detail:'Priced at <strong>$553/sqft</strong> vs. Los Altos luxury avg of $560/sqft. Accurately positioned for a fast sale at full value.'},
+      {icon:'📈', name:'Market Performance', weight:'25 pts', score:24, max:25, pct:96, cls:'good',
+       detail:'<strong>312 views</strong> (+55% above avg). 19 saves — signals very high buyer intent. 9 inquiries this week. Trending up.'},
+      {icon:'📝', name:'Description Quality', weight:'15 pts', score:13, max:15, pct:87, cls:'good',
+       detail:'<strong>420 words</strong> — well above average. Covers all key features. Minor gap: no mention of smart home features or HOA amenities.'},
+      {icon:'⏱️', name:'Response & Activity', weight:'10 pts', score:6, max:10, pct:60, cls:'mid',
+       detail:'Response time averages <strong>4.1 hours</strong> — slower than ideal. No open house yet despite 19 saves. Consider scheduling one this week.'},
+    ],
+    tips: [
+      {n:'1', text:'<strong>Respond faster to inquiries</strong> — your 4.1hr avg drops leads. Aim for under 2hrs to maximize conversions.'},
+      {n:'2', text:'<strong>Add a video walkthrough</strong> — luxury properties with video tours get 40% more serious offers.'},
+      {n:'3', text:'<strong>Schedule an open house this weekend</strong> — you have 19 saves; converting even 3 to viewings is high-value.'},
+    ]
+  }
+];
+
+function openScoreBreakdown(idx) {
+  const d = scoreData[idx];
+  document.getElementById('sov-title').textContent = 'AI Score Breakdown';
+  document.getElementById('sov-addr').textContent = d.addr;
+  document.getElementById('sov-score').textContent = d.score;
+
+  // Grade pill
+  const gradeEl = document.getElementById('sov-grade');
+  gradeEl.textContent = d.grade;
+  gradeEl.className = 'score-grade ' + d.gradeClass;
+
+  // Ring color
+  document.getElementById('score-ring-circle').style.stroke = d.ringColor;
+
+  // Categories
+  const catContainer = document.getElementById('sov-categories');
+  catContainer.innerHTML = d.categories.map(c => `
+    <div class="score-cat">
+      <div class="score-cat-top">
+        <div class="score-cat-left">
+          <div class="score-cat-icon">${c.icon}</div>
+          <div>
+            <div class="score-cat-name">${c.name}</div>
+            <div class="score-cat-weight">Max ${c.weight}</div>
+          </div>
+        </div>
+        <div class="score-cat-pts ${c.cls}">${c.score}/${c.max}</div>
+      </div>
+      <div class="score-bar-bg">
+        <div class="score-bar-fill ${c.cls}" style="width:${c.pct}%"></div>
+      </div>
+      <div class="score-cat-detail">${c.detail}</div>
+    </div>
+  `).join('');
+
+  // Tips
+  const tipsContainer = document.getElementById('sov-tips');
+  tipsContainer.innerHTML = d.tips.map(t => `
+    <div class="score-improve-item">
+      <div class="score-improve-num">${t.n}</div>
+      <div class="score-improve-text">${t.text}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('score-overlay').classList.add('open');
+
+  // Animate ring after open
+  setTimeout(() => animateScoreRing(d.score), 100);
+}
+
+function closeScoreBreakdown() {
+  document.getElementById('score-overlay').classList.remove('open');
+  // Reset ring
+  document.getElementById('score-ring-circle').style.strokeDashoffset = '326.7';
+}
+
+function animateScoreRing(score) {
+  const circle = document.getElementById('score-ring-circle');
+  const circumference = 326.7;
+  const s = score !== undefined ? score : parseInt(document.getElementById('sov-score').textContent);
+  const offset = circumference - (s / 100) * circumference;
+  circle.style.transition = 'stroke-dashoffset .9s cubic-bezier(.25,.46,.45,.94)';
+  circle.style.strokeDashoffset = offset;
+}
+
+// ===== LISTING DETAIL =====
+function openDetail(idx){
+  const l=listingsData[idx];
+  // Set real photo as background image
+  const lovImg = document.getElementById('lov-img');
+  lovImg.style.background = 'none';
+  lovImg.innerHTML = `<img src="${l.photo}" alt="${l.addr}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;"><div class="lov-overlay"></div><div class="lov-back" onclick="closeDetail()">←</div>`;
+  document.getElementById('lov-price').textContent=l.price;
+  document.getElementById('lov-addr').textContent=l.addr;
+  document.getElementById('lov-score').textContent=l.score;
+  document.getElementById('lov-tip').textContent=l.tip;
+  document.getElementById('lov-stats').innerHTML=`
+    <div class="lov-stat"><div class="lov-sv">${l.beds}</div><div class="lov-sl2">Bedrooms</div></div>
+    <div class="lov-stat"><div class="lov-sv">${l.baths}</div><div class="lov-sl2">Bathrooms</div></div>
+    <div class="lov-stat"><div class="lov-sv">${l.sqft}</div><div class="lov-sl2">Sq Ft</div></div>`;
+  document.getElementById('lov-act').innerHTML=`
+    <div class="lov-stat"><div class="lov-sv">${l.views}</div><div class="lov-sl2">Views</div></div>
+    <div class="lov-stat"><div class="lov-sv">${l.saves}</div><div class="lov-sl2">Saves</div></div>
+    <div class="lov-stat"><div class="lov-sv">${l.inquiries}</div><div class="lov-sl2">Inquiries</div></div>`;
+  document.getElementById('lov').classList.add('open');
+}
+
+function closeDetail(){document.getElementById('lov').classList.remove('open');}
+
+// ===== FOLLOW-UPS =====
+function sendFU(idx,name){
+  const btn=document.getElementById('fs'+idx);
+  if(btn.classList.contains('fu-sent'))return;
+  btn.classList.remove('fu-send');btn.classList.add('fu-sent');
+  btn.textContent='✓ Delivered';btn.disabled=true;
+  toast(`✉️ Message sent to ${name}`);
+  fuPending=Math.max(0,fuPending-1);
+  const b=document.getElementById('fu-badge');
+  fuPending===0?b.style.display='none':b.textContent=fuPending;
+}
+
+// ===== EDIT =====
+function openEdit(idx,name){
+  editingFU=idx;
+  document.getElementById('etitle').textContent=`Edit for ${name.split(' ')[0]}`;
+  document.getElementById('esub').textContent='Personalize your AI draft before sending';
+  document.getElementById('etarea').value=document.getElementById('ft'+idx).textContent;
+  document.getElementById('emod').classList.add('open');
+}
+
+function closeEditModal(){document.getElementById('emod').classList.remove('open');editingFU=null;}
+
+function saveEdit(){
+  if(editingFU===null)return;
+  const v=document.getElementById('etarea').value.trim();
+  if(v){document.getElementById('ft'+editingFU).textContent=v;toast('✏️ Draft updated');}
+  closeEditModal();
+}
+
+// ===== TOGGLE =====
+function toggleSwitch(el){el.classList.toggle('off');toast(el.classList.contains('off')?'Setting disabled':'Setting enabled');}
+
+// ===== CLOCK =====
+function tick(){
+  const n=new Date(),h=n.getHours(),m=n.getMinutes().toString().padStart(2,'0');
+  document.getElementById('clock').textContent=h+':'+m;
+}
+tick();setInterval(tick,30000);
+</script>
+</body>
+</html>
